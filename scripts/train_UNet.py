@@ -137,3 +137,7 @@ for epoch in range(num_epochs):
     val_losses.append(val_loss)
     train_dice_scores.append(train_dice_av)
     val_dice_scores.append(val_dice_av)
+
+# Save scores
+
+# Save model
