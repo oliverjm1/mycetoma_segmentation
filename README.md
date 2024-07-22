@@ -8,15 +8,24 @@ This repository contains code for segmenting bacterial and fungal mycetoma grain
 .
 ├── README.md
 ├── data
-│   └── data.md
+│   └── data.md
+├── model_saves
+│   └── model_saves.md
 ├── notebooks
-│   ├── train_UNet.ipynb
-│   └── visualise_data.ipynb
+│   ├── combining_overlapping_masks.ipynb
+│   ├── dealing_with_duplicates.ipynb
+│   ├── look_at_predictions.ipynb
+│   ├── plot_train_scores.ipynb
+│   ├── train_UNet.ipynb
+│   └── visualise_data.ipynb
 ├── scripts
-│   └── train_UNet.py
-└── src
-    ├── UNet2D.py
-    ├── datasets.py
-    ├── metrics.py
-    └── utils.py
+│   └── train_UNet.py
+├── src
+│   ├── UNet2D.py
+│   ├── datasets.py
+│   ├── metrics.py
+│   ├── postprocessing.py
+│   └── utils.py
+└── train_stats
+    └── train_stats.md
 ```
