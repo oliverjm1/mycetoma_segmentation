@@ -26,6 +26,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Training UNet, saving metrics")
     parser.add_argument('--run_name', type=str, required=True, help="Name of run, which will govern output file names")
     parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
+    parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
     return parser.parse_args()
 
 # Parse arguments
@@ -40,8 +41,13 @@ if not os.path.exists(output_dir):
 
 # Get full image path by adding filename to base path
 # Get the paths
-train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*.jpg')])
-val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/validation_dataset/**/*.jpg')])
+if args.use_corrected_dataset:
+    train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_training_dataset/**/*.jpg')])
+    val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_validation_dataset/**/*.jpg')])
+
+else:
+    train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*.jpg')])
+    val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/validation_dataset/**/*.jpg')])
 
 print(f"Train length: {len(train_paths)}")
 print(f"Val length: {len(val_paths)}")
