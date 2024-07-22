@@ -13,13 +13,29 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import torchvision
 from tqdm import tqdm
+import argparse
 
 sys.path.append('../src')
 from UNet2D import UNet2D
 from datasets import MycetomaDataset
 from metrics import batch_dice_coeff, bce_dice_loss, dice_coefficient
 
+# Function to parse command-line arguments
+def parse_args():
+    parser = argparse.ArgumentParser(description="Training UNet, saving metrics")
+    parser.add_argument('--run_name', type=str, required=True, help="Name of run, which will govern output file names")
+    parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
+    return parser.parse_args()
+
+# Parse arguments
+args = parse_args()
+
 DATA_DIR = '../data'
+
+# Directory to save model and metrics
+output_dir = 'outputs'
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 # Get full image path by adding filename to base path
 # Get the paths
@@ -61,7 +77,7 @@ train_losses = []
 val_losses = []
 
 # TRAIN
-num_epochs = 20
+num_epochs = args.epochs
 threshold = 0.5
 best_val_loss = np.inf
 
@@ -69,6 +85,8 @@ best_val_loss = np.inf
 criterion = bce_dice_loss
 l_rate = 1e-4
 optimizer = optim.Adam(model.parameters(), lr=l_rate)
+
+best_model_path = os.path.join(output_dir, args.run_name + '_best_model.pth')
 
 for epoch in range(num_epochs):
 
@@ -138,6 +156,25 @@ for epoch in range(num_epochs):
     train_dice_scores.append(train_dice_av)
     val_dice_scores.append(val_dice_av)
 
-# Save scores
+    # Update best model if lowest loss
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        # Save the model
+        torch.save(model.state_dict(), best_model_path)
+        print('New best model saved')
 
-# Save model
+print("Training completed")
+
+# Save scores
+# Create a dictionary to hold the arrays
+metrics_dict = {
+    'train_losses': np.array(train_losses),
+    'val_losses': np.array(val_losses),
+    'train_dice_scores': np.array(train_dice_scores),
+    'val_dice_scores': np.array(val_dice_scores)
+}
+
+# Save the dictionary to a .npy file
+metrics_file_path = np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
+
+print("Results Saved")
