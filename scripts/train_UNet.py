@@ -9,6 +9,7 @@ import os
 from PIL import Image
 import sys
 import torch
+import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 import torchvision
@@ -66,6 +67,10 @@ print(f'img shape: {im.shape}; mask shape: {mask.shape}')
 # Make model
 model = UNet2D(3, 1, 8)
 model = model.to(device)
+
+# use multiple gpu in parallel if available
+if torch.cuda.device_count() > 1:
+    model = nn.DataParallel(model)
 
 import gc
 torch.cuda.empty_cache()
