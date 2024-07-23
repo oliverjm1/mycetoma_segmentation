@@ -28,6 +28,7 @@ def parse_args():
     parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
     parser.add_argument('--with_augmentation', action='store_true', help="Perform data augmentation on training data")
+    parser.add_argument('--leave_out_bad_cases', action='store_true', help="Don't train on bad cases")
     return parser.parse_args()
 
 # Parse arguments
@@ -44,11 +45,36 @@ if not os.path.exists(output_dir):
 # Get the paths
 if args.use_corrected_dataset:
     train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_training_dataset/**/*.jpg')])
-    val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_validation_dataset/**/*.jpg')])
 
 else:
     train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*.jpg')])
-    val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/validation_dataset/**/*.jpg')])
+
+# Always use corrected for validation(?) to be consistent
+val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_validation_dataset/**/*.jpg')])
+
+# If specified, remove bad masks (and by bad I mean a big grain not labelled at all in mask)
+# Problematic train masks:
+problem_train_paths = np.array([ 
+    'training_dataset/BM/BM3_4',
+    'training_dataset/BM/BM10_2',
+    'training_dataset/BM/BM13_6',
+    'training_dataset/BM/BM30_7',
+    'training_dataset/BM/BM31_7',
+    'training_dataset/BM/BM45_9',
+    'training_dataset/FM/FM41_1',
+    'training_dataset/FM/FM41_2',
+    'training_dataset/FM/FM45_6',
+    'training_dataset/FM/FM45_8',
+    'training_dataset/BM/BM6_11',
+    'training_dataset/FM/FM50_6'
+])
+
+if args.leave_out_bad_cases:
+    train_paths = np.setdiff1d(train_paths, problem_train_paths)
+
+problem_val_paths = np.array(['validation_dataset/FM/FM10_1'])
+
+val_paths = np.setdiff1d(val_paths, problem_val_paths)
 
 print(f"Train length: {len(train_paths)}")
 print(f"Val length: {len(val_paths)}")
@@ -64,7 +90,7 @@ if args.with_augmentation:
     transform = transforms.Compose([
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomResizedCrop(size=(600, 800), scale=(0.7, 1.0)),
+        transforms.RandomResizedCrop(size=(600, 800), scale=(0.9, 1.0)),
     ])
 else:
     transform=None
@@ -199,6 +225,6 @@ metrics_dict = {
 }
 
 # Save the dictionary to a .npy file
-metrics_file_path = np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
+np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
 
 print("Results Saved")
