@@ -12,7 +12,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
-import torchvision
+import torchvision.transforms.v2 as transforms
 from tqdm import tqdm
 import argparse
 
@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument('--run_name', type=str, required=True, help="Name of run, which will govern output file names")
     parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
+    parser.add_argument('--with_augmentation', action='store_true', help="Perform data augmentation on training data")
     return parser.parse_args()
 
 # Parse arguments
@@ -56,9 +57,21 @@ print(f"Val length: {len(val_paths)}")
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 
+# Define the transform pipeline
+if args.with_augmentation:
+    print('Using Augmentation')
+    
+    transform = transforms.Compose([
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.RandomVerticalFlip(p=0.5),
+        transforms.RandomResizedCrop(size=(600, 800), scale=(0.7, 1.0)),
+    ])
+else:
+    transform=None
+
 # Make Datasets
-train_dataset = MycetomaDataset(train_paths, DATA_DIR)
-val_dataset = MycetomaDataset(val_paths, DATA_DIR)
+train_dataset = MycetomaDataset(train_paths, DATA_DIR, transform=transform)
+val_dataset = MycetomaDataset(val_paths, DATA_DIR, transform=transform)
 
 train_dataset.__len__()
 

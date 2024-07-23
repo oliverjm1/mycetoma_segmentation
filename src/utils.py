@@ -18,13 +18,17 @@ def clip_and_norm(image, upper_bound):
 
 # Function that takes in the data directory and relative path,
 # and returns a numpy array of the image and corresponding mask
-def return_image_and_mask(data_dir, path):
+def return_image_and_mask(data_dir, path, as_numpy=True):
     image_path = os.path.join(data_dir, path + '.jpg')
     mask_path = os.path.join(data_dir, path + '_mask.tif')
 
     # Load the image and mask
-    image = np.asarray(Image.open(image_path))
-    mask = np.asarray(Image.open(mask_path))
+    image = Image.open(image_path)
+    mask = Image.open(mask_path)
+
+    if as_numpy:
+        image = np.asarray(image)
+        mask = np.asarray(mask)
 
     return image, mask
 
