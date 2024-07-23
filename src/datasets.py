@@ -43,7 +43,7 @@ class MycetomaDataset(Dataset):
         image = clip_and_norm(image, 255)
 
         # clip mask
-        assert mask.max() == 1, "Mask must be binary"
+        mask = np.clip(mask, 0, 1)
 
         # turn to torch, permute image to move channel to front, and return
         image = torch.from_numpy(image).float().permute(2,0,1)
