@@ -37,6 +37,9 @@ class MycetomaDataset(Dataset):
 
         # Check image and mask size
         assert image.shape == (600, 800, 3), f"Image shape must be (600, 800, 3), got shape {image.shape}"
+        # if 3 channel mask, take first
+        if len(mask.shape) > 2:
+            mask = mask[...,0]
         assert mask.shape == (600, 800), f"Mask shape must be (600, 800), got shape {mask.shape}"
 
         # normalise image
