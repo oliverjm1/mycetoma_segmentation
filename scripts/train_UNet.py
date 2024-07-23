@@ -55,24 +55,24 @@ val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.g
 # If specified, remove bad masks (and by bad I mean a big grain not labelled at all in mask)
 # Problematic train masks:
 problem_train_paths = np.array([ 
-    'training_dataset/BM/BM3_4',
-    'training_dataset/BM/BM10_2',
-    'training_dataset/BM/BM13_6',
-    'training_dataset/BM/BM30_7',
-    'training_dataset/BM/BM31_7',
-    'training_dataset/BM/BM45_9',
-    'training_dataset/FM/FM41_1',
-    'training_dataset/FM/FM41_2',
-    'training_dataset/FM/FM45_6',
-    'training_dataset/FM/FM45_8',
-    'training_dataset/BM/BM6_11',
-    'training_dataset/FM/FM50_6'
+    'corrected_training_dataset/BM/BM3_4',
+    'corrected_training_dataset/BM/BM10_2',
+    'corrected_training_dataset/BM/BM13_6',
+    'corrected_training_dataset/BM/BM30_7',
+    'corrected_training_dataset/BM/BM31_7',
+    'corrected_training_dataset/BM/BM45_9',
+    'corrected_training_dataset/FM/FM41_1',
+    'corrected_training_dataset/FM/FM41_2',
+    'corrected_training_dataset/FM/FM45_6',
+    'corrected_training_dataset/FM/FM45_8',
+    'corrected_training_dataset/BM/BM6_11',
+    'corrected_training_dataset/FM/FM50_6'
 ])
 
 if args.leave_out_bad_cases:
     train_paths = np.setdiff1d(train_paths, problem_train_paths)
 
-problem_val_paths = np.array(['validation_dataset/FM/FM10_1'])
+problem_val_paths = np.array(['corrected_validation_dataset/FM/FM10_1'])
 
 val_paths = np.setdiff1d(val_paths, problem_val_paths)
 
