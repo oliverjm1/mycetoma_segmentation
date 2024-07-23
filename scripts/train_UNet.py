@@ -60,7 +60,7 @@ print(device)
 # Define the transform pipeline
 if args.with_augmentation:
     print('Using Augmentation')
-    
+
     transform = transforms.Compose([
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomVerticalFlip(p=0.5),
@@ -71,7 +71,7 @@ else:
 
 # Make Datasets
 train_dataset = MycetomaDataset(train_paths, DATA_DIR, transform=transform)
-val_dataset = MycetomaDataset(val_paths, DATA_DIR, transform=transform)
+val_dataset = MycetomaDataset(val_paths, DATA_DIR)
 
 train_dataset.__len__()
 
