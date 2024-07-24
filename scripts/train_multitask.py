@@ -163,7 +163,7 @@ for epoch in range(num_epochs):
         seg_loss = seg_criterion(seg_outputs, targets)
         class_loss = class_criterion(class_outputs.squeeze(), labels.float())
 
-        total_loss = seg_loss + (args.loss_weight * class_loss)
+        total_loss = seg_loss + (args.class_loss_weight * class_loss)
 
         total_loss.backward()
         optimizer.step()
@@ -207,7 +207,7 @@ for epoch in range(num_epochs):
             seg_loss = seg_criterion(seg_outputs, targets)
             class_loss = class_criterion(class_outputs.squeeze(), labels.float())
 
-            total_loss = seg_loss + (args.loss_weight * class_loss)
+            total_loss = seg_loss + (args.class_loss_weight * class_loss)
 
             running_loss += total_loss.detach().cpu().numpy()
             dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
