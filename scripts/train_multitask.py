@@ -220,8 +220,8 @@ for epoch in range(num_epochs):
 
     # print stats
     print(f"--------- EPOCH {epoch} ---------")
-    print(f"Train Loss: {train_loss}, Train Dice Score: {train_dice_av}, Train Accuracy: {train_accuracy * 100:.2f}%")
-    print(f"Val Loss: {val_loss}, Val Dice Score: {val_dice_av}, Val Accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Train Loss: {train_loss}, Train Dice Score: {train_dice_av}, Train Accuracy: {val_accuracy * 100:.2f}%")
+    print(f"Val Loss: {val_loss}, Val Dice Score: {val_dice_av}, Val Accuracy: {val_accuracy * 100:.2f}%")
 
     # save stats
     train_losses.append(train_loss)
