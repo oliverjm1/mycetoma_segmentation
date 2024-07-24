@@ -6,6 +6,14 @@ All focus on using the dice coefficient.
 import torch
 import torch.nn as nn
 
+# Define label classification accuracy
+def accuracy(preds, labels):
+    preds = preds.round()  # Convert probabilities to 0 or 1
+    correct = (preds == labels).sum().item()
+    total = labels.size(0)
+    print(f"{correct}/{total} correct")
+    return correct / total
+
 # Define Dice Coefficient for two masks
 def dice_coefficient(mask1, mask2):
     intersection = torch.sum(mask1 * mask2)

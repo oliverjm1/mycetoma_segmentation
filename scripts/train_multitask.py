@@ -15,13 +15,13 @@ from tqdm import tqdm
 import argparse
 
 sys.path.append('../src')
-from UNet2D import UNet2D
+from UNetMultiTask import UNetMultiTask
 from datasets import MycetomaDataset
-from metrics import batch_dice_coeff, bce_dice_loss, dice_coefficient
+from metrics import accuracy, batch_dice_coeff, bce_dice_loss, dice_coefficient
 
 # Function to parse command-line arguments
 def parse_args():
-    parser = argparse.ArgumentParser(description="Training UNet, saving metrics")
+    parser = argparse.ArgumentParser(description="Training UNet Multitask, saving metrics")
     parser.add_argument('--run_name', type=str, required=True, help="Name of run, which will govern output file names")
     parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
@@ -104,11 +104,11 @@ val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
 
 # test batch
 batch = next(iter(train_loader))
-im, mask = batch
-print(f'img shape: {im.shape}; mask shape: {mask.shape}')
+im, mask, label = batch
+print(f'img shape: {im.shape}; mask shape: {mask.shape}; label shape: {label.shape}')
 
 # Make model
-model = UNet2D(3, 1, 8)
+model = UNetMultiTask(3, 1, 8)
 model = model.to(device)
 
 # use multiple gpu in parallel if available
@@ -123,6 +123,8 @@ train_dice_scores = []
 val_dice_scores = []
 train_losses = []
 val_losses = []
+train_accuracies = []
+val_accuracies = []
 
 # TRAIN
 num_epochs = args.epochs
@@ -130,7 +132,8 @@ threshold = 0.5
 best_val_loss = np.inf
 
 # Specify optimiser and criterion
-criterion = bce_dice_loss
+seg_criterion = bce_dice_loss
+class_criterion = nn.BCELoss()
 l_rate = 1e-4
 optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
@@ -142,67 +145,91 @@ for epoch in range(num_epochs):
     model.train()
     running_loss = 0.0
     dice_coeff = 0.0
+    total_accuracy = 0.0
     n = 0    # counter for num of batches
 
     # Loop through train loader
-    for idx, (inputs, targets, _) in enumerate(tqdm(train_loader)):
+    for idx, (inputs, targets, labels) in enumerate(tqdm(train_loader)):
         inputs = inputs.to(device)
-
         targets = targets.to(device)
+        labels = labels.to(device) 
 
         optimizer.zero_grad()
 
         # Forward, backward, and update params
-        outputs = model(inputs)
+        seg_outputs, class_outputs = model(inputs)
 
-        loss = criterion(outputs, targets)
-        loss.backward()
+        seg_loss = seg_criterion(seg_outputs, targets)
+        class_loss = class_criterion(class_outputs.squeeze(), labels.float())
+
+        total_loss = seg_loss + class_loss
+
+        total_loss.backward()
         optimizer.step()
 
-        running_loss += loss.detach().cpu().numpy()
-        dice_coeff += batch_dice_coeff(outputs>threshold, targets).detach().cpu().numpy()
+        running_loss += total_loss.detach().cpu().numpy()
+        dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
+        total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
         n += 1
+
+        # print classification outputs
+        """print(f"Out: {class_outputs.squeeze().detach().cpu()}")
+        print(f"Label: {labels.detach().cpu()}")
+
+        print(f"LOSSES: seg = {seg_loss.detach().cpu().numpy()}, class = {class_loss.detach().cpu().numpy()}, total = {total_loss.detach().cpu().numpy()}")
+        print(f"METRICS: dice = {batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()}, acc = {accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())}")"""
 
     # Get train metrics, averaged over number of images in batch
     train_loss = running_loss/n
     train_dice_av = dice_coeff/n
+    train_accuracy = total_accuracy/n
 
     # After each batch, loop through validation loader and get metrics
     # set model to eval mode and reset metrics
     model.eval()
     running_loss = 0.0
     dice_coeff = 0.0
+    total_accuracy = 0.0
     n = 0
 
     print("------------ VALIDATION -------------")
 
     # Perform loop without computing gradients
     with torch.no_grad():
-        for idx, (inputs, targets, _) in enumerate(tqdm(val_loader)):
+        for idx, (inputs, targets, labels) in enumerate(tqdm(val_loader)):
             inputs = inputs.to(device)
             targets = targets.to(device)
+            labels = labels.to(device) 
 
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            seg_outputs, class_outputs = model(inputs)
 
-            running_loss += loss.detach().cpu().numpy()
-            dice_coeff += batch_dice_coeff(outputs>threshold, targets).detach().cpu().numpy()
+            seg_loss = seg_criterion(seg_outputs, targets)
+            class_loss = class_criterion(class_outputs.squeeze(), labels.float())
+
+            total_loss = seg_loss + class_loss
+
+            running_loss += total_loss.detach().cpu().numpy()
+            dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
+            total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
             n += 1
 
     # Val metrics
     val_loss = running_loss/n
     val_dice_av = dice_coeff/n
+    val_accuracy = total_accuracy/n
 
     # print stats
     print(f"--------- EPOCH {epoch} ---------")
-    print(f"Train Loss: {train_loss}, Train Dice Score: {train_dice_av}")
-    print(f"Val Loss: {val_loss}, Val Dice Score: {val_dice_av}")
+    print(f"Train Loss: {train_loss}, Train Dice Score: {train_dice_av}, Train Accuracy: {train_accuracy * 100:.2f}%")
+    print(f"Val Loss: {val_loss}, Val Dice Score: {val_dice_av}, Val Accuracy: {train_accuracy * 100:.2f}%")
 
     # save stats
     train_losses.append(train_loss)
     val_losses.append(val_loss)
     train_dice_scores.append(train_dice_av)
     val_dice_scores.append(val_dice_av)
+    train_accuracies.append(train_accuracy)
+    val_accuracies.append(val_accuracy)
 
     # Update best model if lowest loss
     if val_loss < best_val_loss:
@@ -219,7 +246,9 @@ metrics_dict = {
     'train_losses': np.array(train_losses),
     'val_losses': np.array(val_losses),
     'train_dice_scores': np.array(train_dice_scores),
-    'val_dice_scores': np.array(val_dice_scores)
+    'val_dice_scores': np.array(val_dice_scores),
+    'train_accuracies': np.array(train_accuracies),
+    'val_accuracies': np.array(val_accuracies)
 }
 
 # Save the dictionary to a .npy file

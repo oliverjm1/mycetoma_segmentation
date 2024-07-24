@@ -56,10 +56,10 @@ class UpConvBlock(nn.Module):
         x = self.conv2(x)
         return x
     
-# Define 2D U-Net architecture
-class UNet2D(nn.Module):
+# Define U-Net/Classifier architecture
+class UNetMultiTask(nn.Module):
     def __init__(self, in_channels, out_channels, num_kernels_1):
-        super(UNet2D, self).__init__()
+        super(UNetMultiTask, self).__init__()
 
         # Encoder
         self.enc1 = EncBlock(in_channels, num_kernels_1)
