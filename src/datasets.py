@@ -1,11 +1,7 @@
 # File containing definition of dataset class used to load in the mycetoma images and masks
 
-from PIL import Image
-import random
 import torch
 from torch.utils.data import Dataset
-import torchvision.transforms as transforms
-import os
 import numpy as np
 from utils import clip_and_norm, return_image_and_mask
 
@@ -23,6 +19,14 @@ class MycetomaDataset(Dataset):
 
     def __getitem__(self, index):
         path = self.paths[index]
+
+        # Determine class based on the path
+        if 'BM' in path:
+            label = 1  # BM is the positive class
+        elif 'FM' in path:
+            label = 0  # FM is the negative class
+        else:
+            raise ValueError(f"Path {path} does not contain 'BM' or 'FM'.")
 
         # transforms?
         if self.transform != None:
@@ -52,4 +56,4 @@ class MycetomaDataset(Dataset):
         image = torch.from_numpy(image).float().permute(2,0,1)
         mask = torch.from_numpy(mask).float().unsqueeze(0)
 
-        return image, mask
+        return image, mask, label
