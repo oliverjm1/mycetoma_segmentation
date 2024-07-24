@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
     parser.add_argument('--with_augmentation', action='store_true', help="Perform data augmentation on training data")
     parser.add_argument('--leave_out_bad_cases', action='store_true', help="Don't train on bad cases")
+    parser.add_argument('--class_loss_weight', type=int, default=1, help='Weight for the classification loss')
     return parser.parse_args()
 
 # Parse arguments
@@ -134,7 +135,7 @@ best_val_loss = np.inf
 # Specify optimiser and criterion
 seg_criterion = bce_dice_loss
 class_criterion = nn.BCELoss()
-l_rate = 1e-4
+l_rate = 5e-5
 optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
 best_model_path = os.path.join(output_dir, args.run_name + '_best_model.pth')
@@ -162,7 +163,7 @@ for epoch in range(num_epochs):
         seg_loss = seg_criterion(seg_outputs, targets)
         class_loss = class_criterion(class_outputs.squeeze(), labels.float())
 
-        total_loss = seg_loss + class_loss
+        total_loss = seg_loss + (args.loss_weight * class_loss)
 
         total_loss.backward()
         optimizer.step()
@@ -206,7 +207,7 @@ for epoch in range(num_epochs):
             seg_loss = seg_criterion(seg_outputs, targets)
             class_loss = class_criterion(class_outputs.squeeze(), labels.float())
 
-            total_loss = seg_loss + class_loss
+            total_loss = seg_loss + (args.loss_weight * class_loss)
 
             running_loss += total_loss.detach().cpu().numpy()
             dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
