@@ -12,10 +12,10 @@ This repository contains code for segmenting bacterial and fungal mycetoma grain
 
 ## Potential Further Steps
 
-1. Go through train/validation data and manually remove bad examples (large areas of ground truth still not labelled).
-2. Data Augmentation.
+1. Go through train/validation data and manually remove bad examples (large areas of ground truth still not labelled). (DONE)
+2. Data Augmentation. (DONE)
 3. Domain issues (staining?).
-4. Saving training/validation masks for Ben to train classifier on.
+4. Saving training/validation masks for Ben to train classifier on. (DONE)
 
 ## Repo Structure
 
@@ -23,24 +23,28 @@ This repository contains code for segmenting bacterial and fungal mycetoma grain
 .
 ├── README.md
 ├── data
-│   └── data.md
+│   └── data.md
 ├── model_saves
-│   └── model_saves.md
+│   └── model_saves.md
 ├── notebooks
-│   ├── combining_overlapping_masks.ipynb
-│   ├── dealing_with_duplicates.ipynb
-│   ├── look_at_predictions.ipynb
-│   ├── plot_train_scores.ipynb
-│   ├── train_UNet.ipynb
-│   └── visualise_data.ipynb
+│   ├── combining_overlapping_masks.ipynb
+│   ├── dealing_with_duplicates.ipynb
+│   ├── look_at_predictions.ipynb
+│   ├── plot_train_scores.ipynb
+│   ├── save_masks.ipynb
+│   ├── train_UNet.ipynb
+│   └── visualise_data.ipynb
 ├── scripts
-│   └── train_UNet.py
+│   ├── outputs
+│   ├── train_UNet.py
+│   └── train_multitask.py
 ├── src
-│   ├── UNet2D.py
-│   ├── datasets.py
-│   ├── metrics.py
-│   ├── postprocessing.py
-│   └── utils.py
+│   ├── UNet2D.py
+│   ├── UNetMultiTask.py
+│   ├── datasets.py
+│   ├── metrics.py
+│   ├── postprocessing.py
+│   └── utils.py
 └── train_stats
     └── train_stats.md
 ```
