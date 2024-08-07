@@ -130,7 +130,7 @@ val_accuracies = []
 # TRAIN
 num_epochs = args.epochs
 threshold = 0.5
-best_val_loss = np.inf
+best_val_class_loss = np.inf
 
 # Specify optimiser and criterion
 seg_criterion = bce_dice_loss
@@ -173,13 +173,6 @@ for epoch in range(num_epochs):
         total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
         n += 1
 
-        # print classification outputs
-        """print(f"Out: {class_outputs.squeeze().detach().cpu()}")
-        print(f"Label: {labels.detach().cpu()}")
-
-        print(f"LOSSES: seg = {seg_loss.detach().cpu().numpy()}, class = {class_loss.detach().cpu().numpy()}, total = {total_loss.detach().cpu().numpy()}")
-        print(f"METRICS: dice = {batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()}, acc = {accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())}")"""
-
     # Get train metrics, averaged over number of images in batch
     train_loss = running_loss/n
     train_dice_av = dice_coeff/n
@@ -189,6 +182,7 @@ for epoch in range(num_epochs):
     # set model to eval mode and reset metrics
     model.eval()
     running_loss = 0.0
+    running_class_loss = 0.0
     dice_coeff = 0.0
     total_accuracy = 0.0
     n = 0
@@ -210,12 +204,14 @@ for epoch in range(num_epochs):
             total_loss = seg_loss + (args.class_loss_weight * class_loss)
 
             running_loss += total_loss.detach().cpu().numpy()
+            running_class_loss += class_loss.detach().cpu().numpy()
             dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
             total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
             n += 1
 
     # Val metrics
     val_loss = running_loss/n
+    val_class_loss = running_class_loss/n
     val_dice_av = dice_coeff/n
     val_accuracy = total_accuracy/n
 

@@ -13,8 +13,16 @@ def accuracy(preds, labels):
     total = labels.size(0)
     return correct / total
 
-# Define Dice Coefficient for two masks
 def dice_coefficient(mask1, mask2):
+    """Calculate the dice score between two binary masks
+
+    Args:
+        mask1 (torch tensor): binary mask
+        mask2 (torch tensor): binary mask
+
+    Returns:
+        float: dice score (between 0 and 1)
+    """
     intersection = torch.sum(mask1 * mask2)
     sum = mask1.sum().item() + mask2.sum().item()
     dice = (2.0 * intersection) / sum
