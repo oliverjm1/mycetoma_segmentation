@@ -69,3 +69,22 @@ def plot_image_and_mask(path, DATA_DIR = '../data/'):
     ax[1].axis('off')
 
     plt.show()
+
+
+def visualize_segmented_image(post_proc_mask, im, pred, imagename_output):
+    # Plot prediction before and after processing
+    fig, ax = plt.subplots(1, 3, figsize=(10, 5))
+    ax[0].imshow(im)
+    ax[0].set_title('Input Image')
+    ax[0].axis('off')
+
+    ax[1].imshow(pred)
+    ax[1].set_title('Predicted Mask')
+    ax[1].axis('off')
+
+    ax[2].imshow(post_proc_mask)
+    ax[2].set_title('Postprocessed Predicted Mask')
+    ax[2].axis('off')
+
+    plt.savefig(imagename_output)
+    #plt.show()
