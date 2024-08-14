@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
-import torchvision.transforms.v2 as transforms
 from tqdm import tqdm
 import argparse
 
@@ -18,6 +17,7 @@ sys.path.append('../src')
 from UNetMultiTask import UNetMultiTask
 from datasets import MycetomaDataset
 from metrics import accuracy, batch_dice_coeff, bce_dice_loss, dice_coefficient
+from transforms import ImageMaskTransforms
 
 # Function to parse command-line arguments
 def parse_args():
@@ -86,11 +86,7 @@ print(device)
 if args.with_augmentation:
     print('Using Augmentation')
 
-    transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        transforms.RandomResizedCrop(size=(600, 800), scale=(0.9, 1.0)),
-    ])
+    transform = ImageMaskTransforms()
 else:
     transform=None
 
