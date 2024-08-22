@@ -385,13 +385,13 @@ def train_model(hyperparams):
         # If validation loss is lowest so far svae the model weights and corresponding hyperparameter
         if avg_val_loss < min_val_loss:
             print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
-            model_path = f"{model_checkpoints_path}/model_weights_best_E.pth"
+            model_path = f"{model_checkpoints_path}/classifier_model_weights_best_E.pth"
             torch.save(model.state_dict(), model_path)
             print(f"Model saved! Best epoch yet: {epoch}")
             print(f"Current hyperparameters:\n{hyperparams} \t Writing hyperparameter values to file...")
 
             # Save current hyperparameter values 
-            with open(f"{model_checkpoints_path}/hyperparams_best_E.txt", "w") as file: 
+            with open(f"{model_checkpoints_path}/classifier_hyperparams_best_E.txt", "w") as file: 
                 file.write(json.dumps(hyperparams))
             
             # Reset min validation loss as current validation loss
