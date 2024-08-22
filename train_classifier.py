@@ -38,7 +38,7 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler # taken from link https://www.geeksforgeeks.org/hyperparameter-tuning-with-ray-tune-in-pytorch/
 from ray.tune.search.hyperopt import HyperOptSearch
 
-from src.utils import format_file_paths, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve
+from src.utils import format_file_paths, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve, plot_losses
 from src.datasets import MycetomaDatasetClassifier
 
 
@@ -379,21 +379,22 @@ def train_model(hyperparams):
         # Append val loss to val losses list
         val_losses.append(val_loss/len(val_loader))
 
+
         # If validation loss is lowest so far svae the model weights and corresponding hyperparameter
         if val_loss < min_val_loss:
-            print(f'Validation Loss Decreased({min_val_loss:.6f}--->{val_loss:.6f}) \t Saving The Model...')
-            model_path = f"{model_checkpoints_path}/_best_E.pth"
+            print(f'Validation Loss Decreased({min_val_loss:.6f}--->{val_loss:.6f}) \t Saving the model...')
+            model_path = f"{model_checkpoints_path}/model_weights_best_E.pth"
             torch.save(model.state_dict(), model_path)
             print(f"Model saved! Best epoch yet: {epoch}")
+            print(f"Current hyperparameters:\n{hyperparams} \t Writing hyperparameter values to file...")
 
             # Save current hyperparameter values 
-            with open(model_checkpoints_path + '/_best_E_hyperparams.txt', 'w') as file: 
+            with open(f"{model_checkpoints_path}/hyperparams_best_E.txt", "w") as file: 
                 file.write(json.dumps(hyperparams))
-
             
             # Reset min validation loss as current validation loss
             min_val_loss = val_loss
-    
+
 
         # Plots of final evaluation metrics
         if epoch == num_epochs-1: #or epoch % 25 == 0 
@@ -405,22 +406,9 @@ def train_model(hyperparams):
             plot_calibration_curve(prob_pred, plot_save_dir)
             plot_roc_curve(fpr, tpr, roc_auc, plot_save_dir)
             
+            plot_losses(train_losses, val_losses, plot_save_dir)
+            
 
-
-
-    #print(all_test_probs)
-    #print(hyperparams)
-    
-    # fig, ax1 = plt.subplots()
-    # plt.plot(train_losses, 'm', label = 'training loss')
-    # plt.plot(test_losses, 'g', label = 'test loss')
-    # plt.yscale("log")
-    # plt.legend(loc='lower right')
-    # plt.xlabel('epoch')
-    # plt.ylabel('loss')
-    # plt.title('Training and validation loss')
-    # plt.show()
-    # plt.close()
     return {"loss": val_loss/len(val_loader)}
 
 

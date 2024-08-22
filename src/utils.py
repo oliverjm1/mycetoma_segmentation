@@ -157,3 +157,17 @@ def plot_roc_curve(fpr, tpr, roc_auc, path) -> None:
     plt.legend(loc="lower right")
     
     plt.savefig(path + "/AUROC.png", dpi=300)
+
+
+def plot_losses(train_losses, test_losses, path) -> None:
+    plt.figure(figsize=(10, 5))
+    
+    plt.plot(train_losses, 'm', label = 'training loss')
+    plt.plot(test_losses, 'g', label = 'test loss')
+    plt.yscale("log")
+    plt.legend(loc='lower right')
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.title('Training and validation loss')
+    
+    plt.savefig(path + "/train_val_loss.png", dpi=300)
