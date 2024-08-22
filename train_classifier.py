@@ -1,5 +1,4 @@
-# TODO: create trimmed down hyperparameter list for the first sweep
-# TODO: add code for hyperparamter sweep (ray-tune or wandb?)
+# TODO: add code for hyperparamter sweep (ray-tune or wandb?) - added ray-tune for now
 # TODO: add model weights savepoint
 # TODO: decide whether to save plots on ARC4
 # TODO: create virtual environment on ARC4 
@@ -10,6 +9,7 @@
 # Library imports
 ###############################################################################################
 import os
+import json
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -60,27 +60,54 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 debug_print("\n\n############ Setting up paths to data #############")
 
 # Set data directory
+def define_dataset(hpc=False):
+    
+    debug_print(f"Current directory: {os.getcwd()}")
 
-# Local
-DATA_DIR = "./data"
-TRAIN_DATA_DIR = "./data/training_dataset"
-PLOT_SAVE_DIR = "./train_stats"
+    # Set data, plots save and model checkpoint paths
+    if hpc:
+        data_dir = "/nobackup/scjb/mycetoma/data/"
+        plot_save_path = "./train_stats"
+        model_checkpoints_path = "./model_saves"
+    
+    else:
+        data_dir = "C:/Users/james/Documents/projects/mycetoma_segmentation/data"
+        plot_save_path = "C:/Users/james/Documents/projects/mycetoma_segmentation/train_stats"
+        model_checkpoints_path = "C:/Users/james/Documents/projects/mycetoma_segmentation/model_saves"
+          
+    # Get the training paths
+    train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/training_dataset/**/*')])
+    val_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/validation_dataset/**/*')])
+
+    debug_print(f"train_paths: {train_paths}")
+    debug_print(f"val_paths: {val_paths}")
+
+    # Post-processing binary 
+    train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/binary postprocessed/corrected_masks_and_augmented_postproc_training/**/*')])
+    val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/binary postprocessed/corrected_masks_and_augmented_postproc_validation/**/*')])
+
+    # Extract just the image paths
+    train_img_paths = train_paths[[not 'mask' in i for i in train_paths]]
+    val_img_paths = val_paths[[not 'mask' in i for i in val_paths]]
+    img_paths = [train_img_paths, val_img_paths]
+
+    # Combine image and segmentation map paths for each patient
+    train_paths = format_file_paths(train_seg_paths_bin, train_img_paths)
+    val_paths = format_file_paths(val_seg_paths_bin, val_img_paths)
+
+    debug_print(f"Train length: {len(train_paths)}")
+    debug_print(f"Val length: {len(val_paths)}")
+
+    debug_print(f"train_paths first example = {np.array(train_paths).shape} = {train_paths[0]}")
+    debug_print(f"val_path first example = {np.array(val_paths).shape} = {train_paths[0]}")
+
+    return data_dir, train_paths, val_paths, plot_save_path, model_checkpoints_path 
 
 
 # ARC4
 # DATA_DIR = "/nobackup/scjb/mycetoma/data/"
 # # TRAIN_DATA_DIR = "/nobackup/scjb/mycetoma/data/training_dataset"
 # PLOT_SAVE_DIR = "./train_stats"
-
-
-
-# Get the training paths
-train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*')])
-val_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/validation_dataset/**/*')])
-
-# Post-processing binary 
-train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/binary postprocessed/corrected_masks_and_augmented_postproc_training/**/*')])
-val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/binary postprocessed/corrected_masks_and_augmented_postproc_validation/**/*')])
 
 # Post-processing logit
 # train_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/logit output/corrected_masks_and_augmented_training/**/*')])
@@ -100,24 +127,6 @@ seg_paths = ["binary postprocessed/corrected_masks_and_augmented_postproc",
             "logit output/corrected_masks_and_augmented",
             "multitask/binary postprocessed/multitask_postproc",
             "multitask/logit output/multitask"]
-
-
-
-# Extract just the image paths
-train_img_paths = train_paths[[not 'mask' in i for i in train_paths]]
-val_img_paths = val_paths[[not 'mask' in i for i in val_paths]]
-img_paths = [train_img_paths, val_img_paths]
-
-# Combine image and segmentation map paths for each patient
-train_paths = format_file_paths(train_seg_paths_bin, train_img_paths)
-val_paths = format_file_paths(val_seg_paths_bin, val_img_paths)
-
-
-debug_print(f"Train length: {len(train_paths)}")
-debug_print(f"Val length: {len(val_paths)}")
-
-debug_print(f"train_paths first example = {np.array(train_paths).shape} = {train_paths[0]}")
-debug_print(f"val_path first example = {np.array(val_paths).shape} = {train_paths[0]}")
 
 
 ###############################################################################################
@@ -181,7 +190,9 @@ seg_path_end = seg_paths[seg_path]
 # Model training
 ###############################################################################################
 
-def train_model(data_dir, train_paths, val_paths, config=hyperparams):
+def train_model(hyperparams):
+
+    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset()
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     debug_print(f"device = {device}")    
@@ -232,6 +243,9 @@ def train_model(data_dir, train_paths, val_paths, config=hyperparams):
 
     train_losses, val_losses = [], []
     accumulation_steps = 3
+    
+    # Initialise minimum validation loss as infinity
+    min_val_loss = float('inf')
 
     debug_print(f"\nTraining model for {num_epochs} epochs...\n")
     for epoch in range(num_epochs):
@@ -364,6 +378,21 @@ def train_model(data_dir, train_paths, val_paths, config=hyperparams):
         
         # Append val loss to val losses list
         val_losses.append(val_loss/len(val_loader))
+
+        # If validation loss is lowest so far svae the model weights and corresponding hyperparameter
+        if val_loss < min_val_loss:
+            print(f'Validation Loss Decreased({min_val_loss:.6f}--->{val_loss:.6f}) \t Saving The Model...')
+            model_path = f"{model_checkpoints_path}/_best_E.pth"
+            torch.save(model.state_dict(), model_path)
+            print(f"Model saved! Best epoch yet: {epoch}")
+
+            # Save current hyperparameter values 
+            with open(model_checkpoints_path + '/_best_E_hyperparams.txt', 'w') as file: 
+                file.write(json.dumps(hyperparams))
+
+            
+            # Reset min validation loss as current validation loss
+            min_val_loss = val_loss
     
 
         # Plots of final evaluation metrics
@@ -372,10 +401,9 @@ def train_model(data_dir, train_paths, val_paths, config=hyperparams):
             fpr, tpr, _ = roc_curve(all_val_labels, all_val_probs)
             roc_auc = auc(fpr, tpr)
 
-            # TODO: call plotting functions
-            plot_pred_prob_dist(prob_pred, prob_true, PLOT_SAVE_DIR)
-            plot_calibration_curve(prob_pred, PLOT_SAVE_DIR)
-            plot_roc_curve(fpr, tpr, roc_auc, PLOT_SAVE_DIR)
+            plot_pred_prob_dist(prob_pred, prob_true, plot_save_dir)
+            plot_calibration_curve(prob_pred, plot_save_dir)
+            plot_roc_curve(fpr, tpr, roc_auc, plot_save_dir)
             
 
 
