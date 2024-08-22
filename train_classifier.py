@@ -62,13 +62,17 @@ debug_print("\n\n############ Setting up paths to data #############")
 # Set data directory
 
 # Local
-# DATA_DIR = "./data"
-# TRAIN_DATA_DIR = "./data/training_dataset"
+DATA_DIR = "./data"
+TRAIN_DATA_DIR = "./data/training_dataset"
+PLOT_SAVE_DIR = "./train_stats"
+
 
 # ARC4
-DATA_DIR = "/nobackup/scjb/mycetoma/data/"
-TRAIN_DATA_DIR = "/nobackup/scjb/mycetoma/data/training_dataset"
-PLOT_SAVE_DIR = "./train_stats"
+# DATA_DIR = "/nobackup/scjb/mycetoma/data/"
+# # TRAIN_DATA_DIR = "/nobackup/scjb/mycetoma/data/training_dataset"
+# PLOT_SAVE_DIR = "./train_stats"
+
+
 
 # Get the training paths
 train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*')])
@@ -79,16 +83,16 @@ train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DAT
 val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/binary postprocessed/corrected_masks_and_augmented_postproc_validation/**/*')])
 
 # Post-processing logit
-train_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/logit output/corrected_masks_and_augmented_training/**/*')])
-val_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/logit output/corrected_masks_and_augmented_validation/**/*')])
+# train_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/logit output/corrected_masks_and_augmented_training/**/*')])
+# val_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/logit output/corrected_masks_and_augmented_validation/**/*')])
 
-# # multitask binary
-train_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/binary postprocessed/multitask_postproc_training/**/*')])
-val_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/binary postprocessed/multitask_postproc_validation/**/*')])
+# # # multitask binary
+# train_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/binary postprocessed/multitask_postproc_training/**/*')])
+# val_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/binary postprocessed/multitask_postproc_validation/**/*')])
 
-# # multitask logit
-train_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/logit output/multitask_training/**/*')])
-val_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/logit output/multitask_validation/**/*')])
+# # # multitask logit
+# train_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/logit output/multitask_training/**/*')])
+# val_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/logit output/multitask_validation/**/*')])
 
 
 # Define segmentation mask types
@@ -105,8 +109,8 @@ val_img_paths = val_paths[[not 'mask' in i for i in val_paths]]
 img_paths = [train_img_paths, val_img_paths]
 
 # Combine image and segmentation map paths for each patient
-train_paths = format_file_paths(train_seg_paths_multibin, train_img_paths)
-val_paths = format_file_paths(val_seg_paths_multibin, val_img_paths)
+train_paths = format_file_paths(train_seg_paths_bin, train_img_paths)
+val_paths = format_file_paths(val_seg_paths_bin, val_img_paths)
 
 
 debug_print(f"Train length: {len(train_paths)}")
@@ -143,45 +147,47 @@ debug_print("\n\n############ Defining hyperparameters #############")
 # }
 
 
-hyperparams_sweep = {
-    "lr": tune.loguniform(1e-5, 1e-3),
-    "batch_size": tune.choice([5, 10, 12, 16]),
-    "weight_decay": tune.loguniform(1e-5, 1e-2),
-    "mask_channel": tune.choice([True, False]),
-    "threshold": tune.uniform(0.4, 0.6),
-    "num_epochs": tune.choice([50]),
-    "seg_path": tune.choice([0,1,2,3]) # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
-    }
-
-
 hyperparams = {
-    "lr": 1e-5,
-    "batch_size": 5,
-    "weight_decay": 1e-5,
-    "mask_channel": True,
-    "threshold": 0.5,
-    "num_epochs": 50,
+    "lr": tune.loguniform(1e-3, 1e-2),
+    "batch_size": tune.choice([2, 4]),
+    "weight_decay": tune.choice([1e-2]),
+    "mask_channel": tune.choice([True]),
+    "threshold": tune.choice([0.4]),
+    "num_epochs": tune.choice([2]),
     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
     }
+
+
+# hyperparams_single = {
+#     "lr": 1e-5,
+#     "batch_size": 5,
+#     "weight_decay": 1e-5,
+#     "mask_channel": True,
+#     "threshold": 0.5,
+#     "num_epochs": 50,
+#     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
+#     }
 
 debug_print(f"hyperparams = {hyperparams}")
             
 # Define segmentation mask type from hyperparameters
-seg_path_type = hyperparams["seg_path"]
-seg_path_end = seg_paths[seg_path_type]
+seg_path = hyperparams["seg_path"]
+print(f"sep_path = {seg_path}\nsep_path type = {type(seg_path)}")
+seg_path_end = seg_paths[seg_path]
+
 
 
 ###############################################################################################
 # Model training
 ###############################################################################################
 
-def train_model(data_dir, train_paths, val_paths, hyperparams):
+def train_model(data_dir, train_paths, val_paths, config=hyperparams):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     debug_print(f"device = {device}")    
 
     # Set hyperparameter values
-    num_epochs = 50 #config["num_epochs"]
+    num_epochs = hyperparams["num_epochs"] #config["num_epochs"]
     lr = hyperparams["lr"]
     batch_size = hyperparams["batch_size"]
     weight_decay = hyperparams["weight_decay"]
@@ -196,11 +202,11 @@ def train_model(data_dir, train_paths, val_paths, hyperparams):
 
     # Create datasets
     train_dataset = MycetomaDatasetClassifier(train_paths, data_dir, mask_channel=mask_channel, transform=True)
-    test_dataset = MycetomaDatasetClassifier(val_paths, data_dir, mask_channel=mask_channel)
+    val_dataset = MycetomaDatasetClassifier(val_paths, data_dir, mask_channel=mask_channel)
 
     # Create dataloaders
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=5, shuffle=False)
+    val_loader = DataLoader(val_dataset, batch_size=5, shuffle=False)
     
     # Define DenseNet model
     model = DenseNet121(
@@ -224,7 +230,7 @@ def train_model(data_dir, train_paths, val_paths, hyperparams):
     debug_print(f"Learning rate scheduler = {lr_scheduler}")
     
 
-    train_losses, test_losses = [], []
+    train_losses, val_losses = [], []
     accumulation_steps = 3
 
     debug_print(f"\nTraining model for {num_epochs} epochs...\n")
@@ -316,54 +322,54 @@ def train_model(data_dir, train_paths, val_paths, hyperparams):
         debug_print("\n----------- Evaluation phase -----------")
         debug_print("Computing validation evaluation metrics...")
         model.eval()
-        test_loss = 0
-        all_test_labels = []
-        all_test_preds = []
-        all_test_probs = []
+        val_loss = 0
+        all_val_labels = []
+        all_val_preds = []
+        all_val_probs = []
 
         with torch.no_grad():
-            for features, labels in test_loader:
+            for features, labels in val_loader:
                 features, labels = features.to(device), labels.to(device)
                 output = model(features)  # Remove batch dimension
                 output = output.squeeze(1)
                 loss = criterion(output, labels.float())
-                test_loss += loss.item()
+                val_loss += loss.item()
     
                 # Store predictions and labels
                 #predicted_probs = F.softmax(output, dim=1)[:, 1]  # Probability of class 1 (positive)
                 predicted_probs = torch.sigmoid(output)
                 predicted_class = (predicted_probs >= threshold).type(torch.long)
-                all_test_labels.extend(labels.cpu().numpy())
-                all_test_preds.extend(predicted_class.cpu().numpy())
-                all_test_probs.extend(predicted_probs.cpu().numpy())
+                all_val_labels.extend(labels.cpu().numpy())
+                all_val_preds.extend(predicted_class.cpu().numpy())
+                all_val_probs.extend(predicted_probs.cpu().numpy())
 
-        #tune.report({"loss": test_loss / len(test_loader)})
+        #tune.report({"loss": val_loss / len(val_loader)})
         
         # Calculate validation evaluation metrics
-        test_accuracy = accuracy_score(all_test_labels, all_test_preds)
-        test_auc = roc_auc_score(all_test_labels, all_test_preds)
-        test_confusion_matrix = confusion_matrix(all_test_labels, all_test_preds)
-        tn, fp, fn, tp = confusion_matrix(all_test_labels, all_test_preds).ravel()
+        val_accuracy = accuracy_score(all_val_labels, all_val_preds)
+        val_auc = roc_auc_score(all_val_labels, all_val_preds)
+        val_confusion_matrix = confusion_matrix(all_val_labels, all_val_preds)
+        tn, fp, fn, tp = confusion_matrix(all_val_labels, all_val_preds).ravel()
 
         # Compute sensitivity (recall) and specificity
         sensitivity = tp / (tp + fn)
         specificity = tn / (tn + fp)
         mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
         
-        # Print test results every 10th epoch
+        # Print val results every 10th epoch
         if epoch % 1 == 0: # Set to 1 for debugging
-            print(f'Test Loss: {test_loss/len(test_loader):.4f}, Test Accuracy: {test_accuracy:.4f}, Test AUC: {test_auc:.4f}', f'Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
-            print('Test Confusion Matrix:')
-            print(test_confusion_matrix)
+            print(f'val Loss: {val_loss/len(val_loader):.4f}, val Accuracy: {val_accuracy:.4f}, val AUC: {val_auc:.4f}', f'Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
+            print('val Confusion Matrix:')
+            print(val_confusion_matrix)
         
-        # Append test loss to test losses list
-        test_losses.append(test_loss/len(test_loader))
+        # Append val loss to val losses list
+        val_losses.append(val_loss/len(val_loader))
     
 
         # Plots of final evaluation metrics
         if epoch == num_epochs-1: #or epoch % 25 == 0 
-            prob_true, prob_pred = calibration_curve(all_test_labels, all_test_probs, n_bins=10)
-            fpr, tpr, _ = roc_curve(all_test_labels, all_test_probs)
+            prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
+            fpr, tpr, _ = roc_curve(all_val_labels, all_val_probs)
             roc_auc = auc(fpr, tpr)
 
             # TODO: call plotting functions
@@ -387,7 +393,7 @@ def train_model(data_dir, train_paths, val_paths, hyperparams):
     # plt.title('Training and validation loss')
     # plt.show()
     # plt.close()
-    return {"loss": test_loss/len(test_loader)}
+    return {"loss": val_loss/len(val_loader)}
 
 
 
