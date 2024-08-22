@@ -5,6 +5,11 @@ from torch.utils.data import Dataset
 import numpy as np
 from src.utils import clip_and_norm, return_image_and_mask, return_image
 
+from PIL import Image
+import torchvision.transforms.v2 as transforms
+
+
+
 # Define the 2D Dataset class
 # Image and mask both need same transforms to be applied, so DO NOT USE RANDOM TRANSFORMS
 # - use e.g. transforms.functional.hflip which has no randomness.
@@ -70,3 +75,66 @@ class MycetomaDataset(Dataset):
             return image
         else:
             return image, mask, label
+        
+
+
+
+
+# Define dataset used for classifier
+class MycetomaDatasetClassifier(Dataset):
+    def __init__(self, paths, data_dir, mask_channel=False, transform=None, transform_chance=0.5):
+        self.paths = paths
+        self.data_dir = data_dir
+        self.transform = transform
+        self.transform_chance = transform_chance
+        self.mask_channel = mask_channel
+
+    def __len__(self):
+        return len(self.paths)
+
+    def __getitem__(self, index):
+        image_path = self.paths[index][0]
+        mask_path = self.paths[index][1]
+
+        # Load the image and mask
+        image = np.asarray(Image.open(image_path))
+        mask = np.asarray(Image.open(mask_path))
+        if 'BM' in image_path:
+            label = 0
+        if 'FM' in image_path:
+            label = 1
+
+        # Check image and mask size
+        assert image.shape == (600, 800, 3), "Image size must be (600, 800, 3)"
+
+        # if mask more than one channel, turn to 2d by taking first channel
+        if len(mask.shape) > 2:
+            mask = mask[..., 0]
+
+        # normalise image
+        image = clip_and_norm(image, 255)
+        
+
+        # clip mask
+        # assert mask.max() == 1, "Mask must be binary"
+
+        # turn to torch, permute image to move channel to front, and return
+        image = torch.from_numpy(image).float().permute(2,0,1)
+        mask = torch.from_numpy(mask).float().unsqueeze(0)
+        
+        if self.transform != None:
+            transform1 = transforms.Compose([
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomVerticalFlip(p=0.5),
+            ])
+            transform2 = transforms.Compose([
+                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.02)
+            ])
+            
+            image, mask = transform1(image, mask)
+            image = transform2(image)
+                
+        if self.mask_channel:
+            image = torch.cat((image, mask), dim=0)
+
+        return image, label
