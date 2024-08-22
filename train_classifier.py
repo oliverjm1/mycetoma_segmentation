@@ -155,17 +155,26 @@ debug_print("\n\n############ Defining hyperparameters #############")
 #     "accumulation": ,
 # }
 
-
 hyperparams = {
-    "lr": tune.loguniform(1e-3, 1e-2),
-    "batch_size": tune.choice([2, 4]),
-    "weight_decay": tune.choice([1e-2]),
-    "mask_channel": tune.choice([True]),
-    "threshold": tune.choice([0.4]),
-    "num_epochs": tune.choice([2]),
+    "lr": tune.loguniform(1e-5, 1e-3),
+    "batch_size": tune.choice([5, 10, 12, 16]),
+    "weight_decay": tune.loguniform(1e-4,1e-2), 
+    "mask_channel": tune.choice([True, False]),
+    "threshold": tune.uniform(0.4, 0.6),
+    "num_epochs": tune.choice([30]),
     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
     }
 
+
+# hyperparams_local_test = {
+#     "lr": tune.loguniform(1e-3, 1e-2),
+#     "batch_size": tune.choice([2, 4]),
+#     "weight_decay": tune.choice([1e-2]),
+#     "mask_channel": tune.choice([True]),
+#     "threshold": tune.choice([0.4]),
+#     "num_epochs": tune.choice([2]),
+#     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
+#     }
 
 # hyperparams_single = {
 #     "lr": 1e-5,
@@ -387,7 +396,7 @@ def train_model(hyperparams):
             print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
             model_path = f"{model_checkpoints_path}/classifier_model_weights_best_E.pth"
             torch.save(model.state_dict(), model_path)
-            print(f"Model saved! Best epoch yet: {epoch}")
+            print(f"Model saved! Best epoch yet: {epoch + 1}")
             print(f"Current hyperparameters:\n{hyperparams} \t Writing hyperparameter values to file...")
 
             # Save current hyperparameter values 
@@ -422,7 +431,6 @@ debug_print("\n\n############ Training model #############")
 # Single set of hyperparameter values
 # train_model(DATA_DIR, train_paths, val_paths, hyperparams)
 
-
 # Hyperparameter sweep
 algo = HyperOptSearch()
 
@@ -432,7 +440,7 @@ tuner = tune.Tuner(  # ③
         metric="loss",
         mode="min",
         search_alg=algo,
-        num_samples=2,  # Number of trials to run
+        num_samples=30,  # Number of trials to run
         #num_samples=20,  # Number of trials to run
         trial_dirname_creator=custom_dirname_creator,
         max_concurrent_trials=1
