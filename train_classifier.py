@@ -370,19 +370,21 @@ def train_model(hyperparams):
         specificity = tn / (tn + fp)
         mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
         
+        avg_val_loss = val_loss/len(val_loader)
+
         # Print val results every 10th epoch
         if epoch % 1 == 0: # Set to 1 for debugging
-            print(f'val Loss: {val_loss/len(val_loader):.4f}, val Accuracy: {val_accuracy:.4f}, val AUC: {val_auc:.4f}', f'Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
+            print(f'val Loss: {avg_val_loss:.4f}, val Accuracy: {val_accuracy:.4f}, val AUC: {val_auc:.4f}', f'Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
             print('val Confusion Matrix:')
             print(val_confusion_matrix)
         
         # Append val loss to val losses list
-        val_losses.append(val_loss/len(val_loader))
+        val_losses.append(avg_val_loss)
 
 
         # If validation loss is lowest so far svae the model weights and corresponding hyperparameter
-        if val_loss < min_val_loss:
-            print(f'Validation Loss Decreased({min_val_loss:.6f}--->{val_loss:.6f}) \t Saving the model...')
+        if avg_val_loss < min_val_loss:
+            print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
             model_path = f"{model_checkpoints_path}/model_weights_best_E.pth"
             torch.save(model.state_dict(), model_path)
             print(f"Model saved! Best epoch yet: {epoch}")
@@ -393,7 +395,7 @@ def train_model(hyperparams):
                 file.write(json.dumps(hyperparams))
             
             # Reset min validation loss as current validation loss
-            min_val_loss = val_loss
+            min_val_loss = avg_val_loss
 
 
         # Plots of final evaluation metrics
@@ -409,7 +411,7 @@ def train_model(hyperparams):
             plot_losses(train_losses, val_losses, plot_save_dir)
             
 
-    return {"loss": val_loss/len(val_loader)}
+    return {"loss": avg_val_loss/len(val_loader)}
 
 
 
