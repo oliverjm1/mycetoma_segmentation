@@ -20,8 +20,6 @@ import torch.nn as nn
 
 import matplotlib.pyplot as plt
 
-import pandas as pd
-import random
 import glob
 from collections import Counter
 from PIL import Image
@@ -41,6 +39,8 @@ from ray.tune.search.hyperopt import HyperOptSearch
 from src.utils import format_file_paths, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve, plot_losses
 from src.datasets import MycetomaDatasetClassifier
 
+# Set running environment (True for HPC, False for local)
+HPC_FLAG = False
 
 # Set debugging
 DEBUG = True
@@ -78,9 +78,6 @@ def define_dataset(hpc=False):
     # Get the training paths
     train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/training_dataset/**/*')])
     val_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/validation_dataset/**/*')])
-
-    debug_print(f"train_paths: {train_paths}")
-    debug_print(f"val_paths: {val_paths}")
 
     # Post-processing binary 
     train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/binary postprocessed/corrected_masks_and_augmented_postproc_training/**/*')])
@@ -201,7 +198,7 @@ seg_path_end = seg_paths[seg_path]
 
 def train_model(hyperparams):
 
-    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset()
+    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(HPC_FLAG)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     debug_print(f"device = {device}")    
@@ -391,7 +388,7 @@ def train_model(hyperparams):
         val_losses.append(avg_val_loss)
 
 
-        # If validation loss is lowest so far svae the model weights and corresponding hyperparameter
+        # If validation loss is lowest so far save the model weights and corresponding hyperparameters
         if avg_val_loss < min_val_loss:
             print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
             model_path = f"{model_checkpoints_path}/classifier_model_weights_best_E.pth"
@@ -406,18 +403,30 @@ def train_model(hyperparams):
             # Reset min validation loss as current validation loss
             min_val_loss = avg_val_loss
 
-
-        # Plots of final evaluation metrics
-        if epoch == num_epochs-1: #or epoch % 25 == 0 
+            # Plot evaluation metrics
+            print("Plotting evaluation metrics...")
             prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
             fpr, tpr, _ = roc_curve(all_val_labels, all_val_probs)
             roc_auc = auc(fpr, tpr)
 
-            plot_pred_prob_dist(prob_pred, prob_true, plot_save_dir)
-            plot_calibration_curve(prob_pred, plot_save_dir)
+            plot_calibration_curve(prob_pred, prob_true, plot_save_dir)
+            plot_pred_prob_dist(prob_pred, plot_save_dir)
             plot_roc_curve(fpr, tpr, roc_auc, plot_save_dir)
-            
             plot_losses(train_losses, val_losses, plot_save_dir)
+            
+            print(f"Plots saved in folder {plot_save_dir}!")
+
+
+        # # Plots of final evaluation metrics
+        # if epoch == num_epochs-1: #or epoch % 25 == 0 
+        #     prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
+        #     fpr, tpr, _ = roc_curve(all_val_labels, all_val_probs)
+        #     roc_auc = auc(fpr, tpr)
+
+        #     plot_calibration_curve(prob_pred, prob_true, plot_save_dir)
+        #     plot_pred_prob_dist(prob_pred, plot_save_dir)
+        #     plot_roc_curve(fpr, tpr, roc_auc, plot_save_dir)
+        #     plot_losses(train_losses, val_losses, plot_save_dir)
             
 
     return {"loss": avg_val_loss/len(val_loader)}
