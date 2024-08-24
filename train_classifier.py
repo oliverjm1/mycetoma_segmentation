@@ -9,6 +9,7 @@
 # Library imports
 ###############################################################################################
 import os
+import sys
 import json
 import numpy as np
 import torch
@@ -40,7 +41,7 @@ from src.utils import format_file_paths, custom_dirname_creator, plot_calibratio
 from src.datasets import MycetomaDatasetClassifier
 
 # Set running environment (True for HPC, False for local)
-HPC_FLAG = False
+HPC_FLAG = sys.argv[1]
 
 # Set debugging
 DEBUG = True
