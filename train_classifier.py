@@ -42,6 +42,7 @@ from src.datasets import MycetomaDatasetClassifier
 
 # Set running environment (True for HPC, False for local)
 HPC_FLAG = sys.argv[1]
+HPC_FLAG
 
 # Set debugging
 DEBUG = True
@@ -68,7 +69,7 @@ def define_dataset(hpc=0):
     # Set data, plots save and model checkpoint paths
     if hpc:
         debug_print("Setting data paths for ARC4...")
-        data_dir = "/nobackup/scjb/mycetoma/data/"
+        data_dir = "/nobackup/scjb/mycetoma/data"
         plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
         model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/model_saves"
     
@@ -91,8 +92,8 @@ def define_dataset(hpc=0):
     img_paths = [train_img_paths, val_img_paths]
 
     # Combine image and segmentation map paths for each patient
-    train_paths = format_file_paths(train_seg_paths_bin, train_img_paths)
-    val_paths = format_file_paths(val_seg_paths_bin, val_img_paths)
+    train_paths = format_file_paths(train_seg_paths_bin, train_img_paths, HPC_FLAG)
+    val_paths = format_file_paths(val_seg_paths_bin, val_img_paths, HPC_FLAG)
 
     debug_print(f"Train length: {len(train_paths)}")
     debug_print(f"Val length: {len(val_paths)}")

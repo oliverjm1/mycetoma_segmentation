@@ -91,18 +91,26 @@ def visualize_segmented_image(post_proc_mask, im, pred, imagename_output):
 
 
 
-def format_file_paths(paths, img_paths):
+def format_file_paths(paths, img_paths, hpc):
+    # Initialise file paths and patients list
     file_paths = []
     patient = []
+
+    if hpc:
+        file_path_sep = "/"
+    else:
+        file_path_sep = "\\"
+
+    # For each image path
     for file in img_paths:
         patient.append(file)
         matched = False
         #file_start = '.'.join(file.split('.')[:-1])
-        file_end = file.split("\\")[-1].split('.')[0]
+        file_end = file.split(file_path_sep)[-1].split('.')[0]
         for file2 in paths:
             if 'mask' in file2:
                 #file_start2 = '.'.join(file2.split('.')[:-1])[:-5]
-                file_end2 = '_'.join(file2.split("\\")[-1].split('.')[0].split('_')[0:2])
+                file_end2 = '_'.join(file2.split(file_path_sep)[-1].split('.')[0].split('_')[0:2])
                 if file_end == file_end2:
                     patient.append(file2)
                     file_paths.append(patient)
