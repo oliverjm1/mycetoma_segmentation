@@ -61,15 +61,16 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 debug_print("\n\n############ Setting up paths to data #############")
 
 # Set data directory
-def define_dataset(hpc=False):
+def define_dataset(hpc=0):
     
     debug_print(f"Current directory: {os.getcwd()}")
 
     # Set data, plots save and model checkpoint paths
     if hpc:
+        debug_print("Setting data paths for ARC4...")
         data_dir = "/nobackup/scjb/mycetoma/data/"
-        plot_save_path = "./train_stats"
-        model_checkpoints_path = "./model_saves"
+        plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
+        model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/model_saves"
     
     else:
         data_dir = "C:/Users/james/Documents/projects/mycetoma_segmentation/data"
