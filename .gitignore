@@ -7,6 +7,9 @@ src/__pycache__/
 data/*
 !data/data.md
 
+# ignore weights and biases files
+wandb/*
+
 # ignore results 
 results/masks/*
 results/output_images/*
