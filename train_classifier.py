@@ -11,6 +11,7 @@
 import os
 import sys
 import json
+import time
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -37,8 +38,13 @@ from ray import tune
 from ray.tune.schedulers import ASHAScheduler # taken from link https://www.geeksforgeeks.org/hyperparameter-tuning-with-ray-tune-in-pytorch/
 from ray.tune.search.hyperopt import HyperOptSearch
 
+import wandb
+
 from src.utils import format_file_paths, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve, plot_losses
 from src.datasets import MycetomaDatasetClassifier
+
+
+os.environ["WANDB__SERVICE_WAIT"] = "300"
 
 # Set running environment (True for HPC, False for local)
 HPC_FLAG = sys.argv[1]
@@ -54,37 +60,42 @@ def debug_print(debug_statement):
 
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+print(f"device = {device}")
 
 ###############################################################################################
 # Set up paths for images and masks 
 ###############################################################################################
-debug_print("\n\n############ Setting up paths to data #############")
 
 # Set data directory
 def define_dataset(hpc=0):
     
+    debug_print("\n\n############ Setting up paths to data #############")
+    
     debug_print(f"Current directory: {os.getcwd()}")
 
     # Set data, plots save and model checkpoint paths
-    if hpc:
+    if hpc == 1:
         debug_print("Setting data paths for ARC4...")
         data_dir = "/nobackup/scjb/mycetoma/data"
         plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
         model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/model_saves"
+        
     
     else:
-        data_dir = "C:/Users/james/Documents/projects/mycetoma_segmentation/data"
-        plot_save_path = "C:/Users/james/Documents/projects/mycetoma_segmentation/train_stats"
-        model_checkpoints_path = "C:/Users/james/Documents/projects/mycetoma_segmentation/model_saves"
+        debug_print("Setting data paths for local machine...")
+        data_dir = "C:\\Users\\james\\Documents\\projects\\mycetoma_segmentation\\data"
+        plot_save_path = "C:\\Users\\james\\Documents\\projects\\mycetoma_segmentation\\train_stats"
+        model_checkpoints_path = "C:\\Users\\james\\Documents\\projects\\mycetoma_segmentation\\model_saves"
           
     # Get the training paths
-    train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/training_dataset/**/*')])
-    val_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/validation_dataset/**/*')])
+    train_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "training_dataset", "**", "*"))])
+    val_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "validation_dataset", "**", "*"))])
+
+    debug_print(f"Train paths: {train_paths}")
 
     # Post-processing binary 
-    train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/binary postprocessed/corrected_masks_and_augmented_postproc_training/**/*')])
-    val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{data_dir}/binary postprocessed/corrected_masks_and_augmented_postproc_validation/**/*')])
+    train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_training", "**", "*"))])
+    val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_validation", "**", "*"))])
 
     # Extract just the image paths
     train_img_paths = train_paths[[not 'mask' in i for i in train_paths]]
@@ -155,15 +166,51 @@ debug_print("\n\n############ Defining hyperparameters #############")
 #     "accumulation": ,
 # }
 
-hyperparams = {
-    "lr": tune.loguniform(1e-5, 1e-3),
-    "batch_size": tune.choice([5, 10, 12, 16]),
-    "weight_decay": tune.loguniform(1e-4,1e-2), 
-    "mask_channel": tune.choice([True, False]),
-    "threshold": tune.uniform(0.4, 0.6),
-    "num_epochs": tune.choice([30]),
-    "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
-    }
+
+# Ray Tune hyperparameter settings
+# hyperparams = {
+#     "lr": tune.loguniform(1e-5, 1e-3),
+#     "batch_size": tune.choice([5, 10, 12, 16]),
+#     "weight_decay": tune.loguniform(1e-4,1e-2), 
+#     "mask_channel": tune.choice([True, False]),
+#     "threshold": tune.uniform(0.4, 0.6),
+#     "num_epochs": tune.choice([30]),
+#     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
+#     }
+
+
+# WandB hyperparams settings
+sweep_configuration = {
+    "method": "bayes",
+    "name": "sweep",
+    "metric": {"goal": "minimize", "name": "Val Loss"},
+    "parameters": {
+        "lr": {"max": 0.01, "min": 0.0001},
+        "batch_size": {"values": [5,10,12,16]},
+        "weight_decay": {"values": [0.0001, 0.001, 0.01]},
+        "mask_channel": {"values": [True, False]},
+        "threshold": {"max": 0.6, "min": 0.4},
+        "num_epochs": {"values": [20]},
+        "seg_path": {"values": [0]},
+    },
+}
+
+
+# Initialize sweep by passing in config.
+# Provide a name of the project.
+
+sweep_id = wandb.sweep(sweep=sweep_configuration, project="mycetoma-classifier-bayesian-sweep")
+
+
+#     "lr": tune.loguniform(1e-5, 1e-3),
+#     "batch_size": tune.choice([5, 10, 12, 16]),
+#     "weight_decay": tune.loguniform(1e-4,1e-2), 
+#     "mask_channel": tune.choice([True, False]),
+#     "threshold": tune.uniform(0.4, 0.6),
+#     "num_epochs": tune.choice([30]),
+#     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
+#     }
+
 
 
 # hyperparams_local_test = {
@@ -186,20 +233,20 @@ hyperparams = {
 #     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
 #     }
 
-debug_print(f"hyperparams = {hyperparams}")
+debug_print(f"hyperparams = {sweep_configuration}")
             
-# Define segmentation mask type from hyperparameters
-seg_path = hyperparams["seg_path"]
-print(f"sep_path = {seg_path}\nsep_path type = {type(seg_path)}")
-seg_path_end = seg_paths[seg_path]
-
 
 
 ###############################################################################################
 # Model training
 ###############################################################################################
 
-def train_model(hyperparams):
+def main():
+
+    run_start_time = time.strftime("%Y%m%d_%H%M%S")
+    print(f"Run start time = {run_start_time}")
+
+    run = wandb.init()
 
     data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(HPC_FLAG)
     
@@ -207,12 +254,27 @@ def train_model(hyperparams):
     debug_print(f"device = {device}")    
 
     # Set hyperparameter values
-    num_epochs = hyperparams["num_epochs"] #config["num_epochs"]
-    lr = hyperparams["lr"]
-    batch_size = hyperparams["batch_size"]
-    weight_decay = hyperparams["weight_decay"]
-    mask_channel = hyperparams["mask_channel"]
-    threshold = hyperparams["threshold"]
+    
+    # num_epochs = hyperparams["num_epochs"] #config["num_epochs"]
+    # lr = hyperparams["lr"]
+    # batch_size = hyperparams["batch_size"]
+    # weight_decay = hyperparams["weight_decay"]
+    # mask_channel = hyperparams["mask_channel"]
+    # threshold = hyperparams["threshold"]
+    
+    lr = wandb.config.lr
+    batch_size = wandb.config.batch_size
+    weight_decay = wandb.config.weight_decay
+    mask_channel = wandb.config.mask_channel
+    threshold = wandb.config.threshold
+    num_epochs = wandb.config.num_epochs #config["num_epochs"]
+    seg_path = wandb.config.seg_path
+
+    print(f"Current hyperparameter values:\n {wandb.config}")
+
+    print(f"sep_path = {seg_path}\nsep_path type = {type(seg_path)}")
+    # seg_path_end = seg_paths[seg_path]
+
 
     if mask_channel:
         num_channels = 4
@@ -236,7 +298,7 @@ def train_model(hyperparams):
         pretrained=True
     )
     
-    debug_print("Loading model to device...") 
+    debug_print(f"Loading model to device: {device}...") 
     model = model.to(device)    
 
     criterion = nn.BCEWithLogitsLoss()
@@ -274,6 +336,8 @@ def train_model(hyperparams):
         optimiser.zero_grad()
 
         len_train_loader = len(train_loader)
+
+        debug_print(f"Loading features and labels to device: {device}")
 
         # Loop through train loader
         for features, labels in train_loader:
@@ -331,14 +395,26 @@ def train_model(hyperparams):
         tn, fp, fn, tp = confusion_matrix(all_train_labels, all_train_preds).ravel()
 
         # Compute sensitivity (recall) and specificity
-        sensitivity = tp / (tp + fn)
-        specificity = tn / (tn + fp)
-        mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        train_sensitivity = tp / (tp + fn)
+        train_specificity = tn / (tn + fp)
+        train_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
         if epoch % 1 == 0: # set to 1 for debugging 
-            print(f'Epoch [{epoch+1}/{num_epochs}], Train Loss: {train_loss/len(train_loader):.4f}, Train Accuracy: {train_accuracy:.4f}, Train AUC: {train_auc:.4f}, Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
+            print(f"""
+                Epoch [{epoch+1}/{num_epochs}]
+                Train Loss: {train_loss/len(train_loader):.4f}
+                Train Accuracy: {train_accuracy:.4f}
+                Train AUC: {train_auc:.4f}
+                Train Sensitivity: {train_sensitivity:.4f}
+                Train Specificity: {train_specificity:.4f}
+                Train MCC: {train_mcc:.4f}'
+            """)
             print(f'Train Confusion Matrix:')
             print(train_confusion_matrix)
-        train_losses.append(train_loss/len(train_loader))
+        
+        avg_train_loss = train_loss/len(train_loader)
+        train_losses.append(avg_train_loss)
+        
+        
     
 
         # Evaluation phase
@@ -375,15 +451,15 @@ def train_model(hyperparams):
         tn, fp, fn, tp = confusion_matrix(all_val_labels, all_val_preds).ravel()
 
         # Compute sensitivity (recall) and specificity
-        sensitivity = tp / (tp + fn)
-        specificity = tn / (tn + fp)
-        mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        val_sensitivity = tp / (tp + fn)
+        val_specificity = tn / (tn + fp)
+        val_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
         
         avg_val_loss = val_loss/len(val_loader)
 
         # Print val results every 10th epoch
         if epoch % 1 == 0: # Set to 1 for debugging
-            print(f'val Loss: {avg_val_loss:.4f}, val Accuracy: {val_accuracy:.4f}, val AUC: {val_auc:.4f}', f'Sensitivity: {sensitivity:.4f}, Specificity: {specificity:.4f}', f'MCC: {mcc:.4f}')
+            print(f'val Loss: {avg_val_loss:.4f}, val Accuracy: {val_accuracy:.4f}, val AUC: {val_auc:.4f}', f'Sensitivity: {val_sensitivity:.4f}, Specificity: {val_specificity:.4f}', f'MCC: {val_mcc:.4f}')
             print('val Confusion Matrix:')
             print(val_confusion_matrix)
         
@@ -394,14 +470,14 @@ def train_model(hyperparams):
         # If validation loss is lowest so far save the model weights and corresponding hyperparameters
         if avg_val_loss < min_val_loss:
             print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
-            model_path = f"{model_checkpoints_path}/classifier_model_weights_best_E.pth"
+            model_path = os.path.join(model_checkpoints_path, f"classifier_model_weights_best_E_{run_start_time}.pth")
             torch.save(model.state_dict(), model_path)
             print(f"Model saved! Best epoch yet: {epoch + 1}")
-            print(f"Current hyperparameters:\n{hyperparams} \t Writing hyperparameter values to file...")
+            print(f"Current hyperparameters:\n{wandb.config} \t Writing hyperparameter values to file...")
 
             # Save current hyperparameter values 
-            with open(f"{model_checkpoints_path}/classifier_hyperparams_best_E.txt", "w") as file: 
-                file.write(json.dumps(hyperparams))
+            with open(os.path.join(model_checkpoints_path, f"classifier_hyperparams_best_E_{run_start_time}.txt"), "w") as file: 
+                file.write(json.dumps(wandb.config))
             
             # Reset min validation loss as current validation loss
             min_val_loss = avg_val_loss
@@ -409,17 +485,35 @@ def train_model(hyperparams):
             # Plot evaluation metrics
             print("Plotting evaluation metrics...")
             prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
-            fpr, tpr, _ = roc_curve(all_val_labels, all_val_probs)
-            roc_auc = auc(fpr, tpr)
+            val_fpr, val_tpr, _ = roc_curve(all_val_labels, all_val_probs)
+            val_roc_auc = auc(val_fpr, val_tpr)
 
             plot_calibration_curve(prob_pred, prob_true, plot_save_dir)
             plot_pred_prob_dist(prob_pred, plot_save_dir)
-            plot_roc_curve(fpr, tpr, roc_auc, plot_save_dir)
+            plot_roc_curve(val_fpr, val_tpr, val_roc_auc, plot_save_dir)
             plot_losses(train_losses, val_losses, plot_save_dir)
             
             print(f"Plots saved in folder {plot_save_dir}!")
 
-
+        # log to wandb
+        wandb.log(
+            {
+                "Train Loss": avg_train_loss,
+                "Train Accuracy": train_accuracy,
+                "Train AUC": train_auc,
+                "Train Sensitivity": train_sensitivity,
+                "Train Specificity": train_specificity,
+                "Train MCC": train_mcc,
+                "Val Loss": avg_val_loss,
+                "Val Accuracy": val_accuracy,
+                "Val AUC": val_auc,
+                "Val Sensitivity": val_sensitivity,
+                "Val Specificity": val_specificity,
+                "Val MCC": val_mcc
+            }
+        )
+        
+        
         # # Plots of final evaluation metrics
         # if epoch == num_epochs-1: #or epoch % 25 == 0 
         #     prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
@@ -443,21 +537,31 @@ debug_print("\n\n############ Training model #############")
 # Single set of hyperparameter values
 # train_model(DATA_DIR, train_paths, val_paths, hyperparams)
 
-# Hyperparameter sweep
-algo = HyperOptSearch()
 
-tuner = tune.Tuner(  # ③
-    train_model,
-    tune_config=tune.TuneConfig(
-        metric="loss",
-        mode="min",
-        search_alg=algo,
-        num_samples=30,  # Number of trials to run
-        #num_samples=20,  # Number of trials to run
-        trial_dirname_creator=custom_dirname_creator,
-        max_concurrent_trials=1
-    ),
-    param_space=hyperparams,
-)
+# RAY TUNE - COMMENTED OUT IN FAVOUR OF WANDB
+# Set ray tune to not change the working directory
 
-results = tuner.fit()
+# os.environ["RAY_CHDIR_TO_TRIAL_DIR"] = "0"
+# print(f"ray tune set to not change working directory: RAY_CHDIR_TO_TRIAL_DIR = {os.environ["RAY_CHDIR_TO_TRIAL_DIR"]}")
+
+# # Hyperparameter sweep
+# algo = HyperOptSearch()
+
+# tuner = tune.Tuner(  # ③
+#     train_model,
+#     tune_config=tune.TuneConfig(
+#         metric="loss",
+#         mode="min",
+#         search_alg=algo,
+#         num_samples=30,  # Number of trials to run
+#         #num_samples=20,  # Number of trials to run
+#         trial_dirname_creator=custom_dirname_creator,
+#         max_concurrent_trials=1
+#     ),
+#     param_space=hyperparams,
+# )
+
+# results = tuner.fit()
+
+# Start sweep job.
+wandb.agent(sweep_id, function=main, count=20)
