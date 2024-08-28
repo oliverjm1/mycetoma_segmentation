@@ -96,7 +96,7 @@ def format_file_paths(paths, img_paths, hpc):
     file_paths = []
     patient = []
 
-    if hpc:
+    if hpc==1:
         file_path_sep = "/"
     else:
         file_path_sep = "\\"
