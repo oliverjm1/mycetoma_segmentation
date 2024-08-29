@@ -46,10 +46,6 @@ from src.datasets import MycetomaDatasetClassifier
 
 os.environ["WANDB__SERVICE_WAIT"] = "300"
 
-# Set running environment (True for HPC, False for local)
-HPC_FLAG = sys.argv[1]
-HPC_FLAG
-
 # Set debugging
 DEBUG = True
 DEBUG_PRINT_INTERVAL = 10
@@ -57,6 +53,11 @@ DEBUG_PRINT_INTERVAL = 10
 def debug_print(debug_statement):
     if DEBUG:
         print(debug_statement)
+
+# Set running environment (True for HPC, False for local)
+HPC_FLAG = sys.argv[1]
+debug_print(f"HPC_FLAG = {HPC_FLAG}")
+
 
 # Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -74,13 +75,12 @@ def define_dataset(hpc=0):
     debug_print(f"Current directory: {os.getcwd()}")
 
     # Set data, plots save and model checkpoint paths
-    if hpc == 1:
+    if hpc==1:
         debug_print("Setting data paths for ARC4...")
         data_dir = "/nobackup/scjb/mycetoma/data"
         plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
         model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/model_saves"
         
-    
     else:
         debug_print("Setting data paths for local machine...")
         data_dir = "C:\\Users\\james\\Documents\\projects\\mycetoma_segmentation\\data"
@@ -248,7 +248,7 @@ def main():
 
     run = wandb.init()
 
-    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(HPC_FLAG)
+    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(hpc=HPC_FLAG)
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     debug_print(f"device = {device}")    
