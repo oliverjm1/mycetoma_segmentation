@@ -395,9 +395,24 @@ def main():
         tn, fp, fn, tp = confusion_matrix(all_train_labels, all_train_preds).ravel()
 
         # Compute sensitivity (recall) and specificity
-        train_sensitivity = tp / (tp + fn)
-        train_specificity = tn / (tn + fp)
-        train_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        try:
+            train_sensitivity = tp / (tp + fn)
+        except ZeroDivisionError:
+            print("Train senstivity divide by zero error! Setting train sensitivty to zero.")
+            train_sensitivity = 0
+        
+        try:
+            train_specificity = tn / (tn + fp)
+        except ZeroDivisionError:
+            print("Train specifity divide by zero error! Setting train specificity to zero.")
+            train_specificity = 0
+
+        try:
+            train_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        except ZeroDivisionError:
+            print("Train mcc divide by zero error! Setting train mcc to zero.")
+            train_mcc = 0
+
         if epoch % 1 == 0: # set to 1 for debugging 
             print(f"""
                 Epoch [{epoch+1}/{num_epochs}]
@@ -450,10 +465,29 @@ def main():
         val_confusion_matrix = confusion_matrix(all_val_labels, all_val_preds)
         tn, fp, fn, tp = confusion_matrix(all_val_labels, all_val_preds).ravel()
 
+        # # Compute sensitivity (recall) and specificity - now using try/except blocks to handle divide by zero error
+        # val_sensitivity = tp / (tp + fn)
+        # val_specificity = tn / (tn + fp)
+        # val_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+
         # Compute sensitivity (recall) and specificity
-        val_sensitivity = tp / (tp + fn)
-        val_specificity = tn / (tn + fp)
-        val_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        try:
+            val_sensitivity = tp / (tp + fn)
+        except ZeroDivisionError:
+            print("Val senstivity divide by zero error! Setting val sensitivty to zero.")
+            train_sensitivity = 0
+        
+        try:
+            val_specificity = tn / (tn + fp)
+        except ZeroDivisionError:
+            print("Val specifity divide by zero error! Setting val specificity to zero.")
+            val_specificity = 0
+
+        try:
+            val_mcc = ((tp*tn) - (fp*fn)) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+        except ZeroDivisionError:
+            print("Val mcc divide by zero error! Setting val mcc to zero.")
+            val_mcc = 0
         
         avg_val_loss = val_loss/len(val_loader)
 
