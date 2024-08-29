@@ -20,7 +20,8 @@ import torchvision.transforms.v2 as transforms
 from torch.utils.data import DataLoader, Dataset
 import torch.nn as nn
 
-import matplotlib.pyplot as plt
+# Rmeoved as plotting done in WandB now
+# import matplotlib.pyplot as plt
 
 import glob
 from collections import Counter
@@ -40,7 +41,7 @@ from monai.networks.nets import DenseNet121 #, HighResNet, EfficientNet, ResNet
 
 import wandb
 
-from src.utils import format_file_paths, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve, plot_losses
+from src.utils import format_file_paths #, custom_dirname_creator, plot_calibration_curve, plot_pred_prob_dist, plot_roc_curve, plot_losses
 from src.datasets import MycetomaDatasetClassifier
 
 
@@ -516,18 +517,18 @@ def main():
             # Reset min validation loss as current validation loss
             min_val_loss = avg_val_loss
 
-            # Plot evaluation metrics
-            print("Plotting evaluation metrics...")
+            # Calculate evaluation metrics
+            print("Calculating evaluation metrics...")
             prob_true, prob_pred = calibration_curve(all_val_labels, all_val_probs, n_bins=10)
             val_fpr, val_tpr, _ = roc_curve(all_val_labels, all_val_probs)
             val_roc_auc = auc(val_fpr, val_tpr)
 
-            plot_calibration_curve(prob_pred, prob_true, plot_save_dir)
-            plot_pred_prob_dist(prob_pred, plot_save_dir)
-            plot_roc_curve(val_fpr, val_tpr, val_roc_auc, plot_save_dir)
-            plot_losses(train_losses, val_losses, plot_save_dir)
-            
-            print(f"Plots saved in folder {plot_save_dir}!")
+            # Removed plotting as plotting performed in WandB
+            # plot_calibration_curve(prob_pred, prob_true, plot_save_dir)
+            # plot_pred_prob_dist(prob_pred, plot_save_dir)
+            # plot_roc_curve(val_fpr, val_tpr, val_roc_auc, plot_save_dir)
+            # plot_losses(train_losses, val_losses, plot_save_dir)   
+            # print(f"Plots saved in folder {plot_save_dir}!")
 
         # log to wandb
         wandb.log(
