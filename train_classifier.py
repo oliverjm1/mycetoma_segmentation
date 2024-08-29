@@ -475,9 +475,9 @@ def main():
             print(f"Model saved! Best epoch yet: {epoch + 1}")
             print(f"Current hyperparameters:\n{wandb.config} \t Writing hyperparameter values to file...")
 
-            # Save current hyperparameter values 
-            with open(os.path.join(model_checkpoints_path, f"classifier_hyperparams_best_E_{run_start_time}.txt"), "w") as file: 
-                file.write(wandb.config)
+            # # Save current hyperparameter values 
+            # with open(os.path.join(model_checkpoints_path, f"classifier_hyperparams_best_E_{run_start_time}.txt"), "w") as file: 
+            #     file.write(wandb.config)
             
             # Reset min validation loss as current validation loss
             min_val_loss = avg_val_loss
