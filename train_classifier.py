@@ -33,10 +33,10 @@ from sklearn.calibration import calibration_curve
 # Import DenseNet model
 from monai.networks.nets import DenseNet121 #, HighResNet, EfficientNet, ResNet
 
-# Import ray for hyperparamter tuning
-from ray import tune
-from ray.tune.schedulers import ASHAScheduler # taken from link https://www.geeksforgeeks.org/hyperparameter-tuning-with-ray-tune-in-pytorch/
-from ray.tune.search.hyperopt import HyperOptSearch
+# # Import ray for hyperparamter tuning
+# from ray import tune
+# from ray.tune.schedulers import ASHAScheduler # taken from link https://www.geeksforgeeks.org/hyperparameter-tuning-with-ray-tune-in-pytorch/
+# from ray.tune.search.hyperopt import HyperOptSearch
 
 import wandb
 
@@ -477,7 +477,7 @@ def main():
 
             # Save current hyperparameter values 
             with open(os.path.join(model_checkpoints_path, f"classifier_hyperparams_best_E_{run_start_time}.txt"), "w") as file: 
-                file.write(json.dumps(wandb.config))
+                file.write(wandb.config)
             
             # Reset min validation loss as current validation loss
             min_val_loss = avg_val_loss
