@@ -75,7 +75,7 @@ def define_dataset(hpc=0):
     debug_print(f"Current directory: {os.getcwd()}")
 
     # Set data, plots save and model checkpoint paths
-    if hpc==1:
+    if hpc=="1":
         debug_print("Setting data paths for ARC4...")
         data_dir = "/nobackup/scjb/mycetoma/data"
         plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
