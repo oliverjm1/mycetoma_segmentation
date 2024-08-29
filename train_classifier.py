@@ -505,7 +505,9 @@ def main():
         # If validation loss is lowest so far save the model weights and corresponding hyperparameters
         if avg_val_loss < min_val_loss:
             print(f'Validation Loss Decreased({min_val_loss:.6f}--->{avg_val_loss:.6f}) \t Saving the model...')
-            model_path = os.path.join(model_checkpoints_path, f"classifier_model_weights_best_E_{run_start_time}.pth")
+
+            # Save model weights with run start time and wandb run id in filename
+            model_path = os.path.join(model_checkpoints_path, f"classifier_model_weights_best_E_{run_start_time}_{run.id}.pth")
             torch.save(model.state_dict(), model_path)
             print(f"Model saved! Best epoch yet: {epoch + 1}")
             print(f"Current hyperparameters:\n{wandb.config} \t Writing hyperparameter values to file...")
