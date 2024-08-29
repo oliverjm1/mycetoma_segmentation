@@ -80,7 +80,7 @@ def define_dataset(hpc=0):
         debug_print("Setting data paths for ARC4...")
         data_dir = "/nobackup/scjb/mycetoma/data"
         plot_save_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/train_stats"
-        model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation-dev-james/model_saves"
+        model_checkpoints_path = "/home/home02/scjb/mycetoma_segmentation/model_saves"
         
     else:
         debug_print("Setting data paths for local machine...")
