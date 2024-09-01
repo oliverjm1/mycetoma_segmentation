@@ -12,6 +12,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import argparse
+import wandb
 
 sys.path.append('../src')
 from UNetMultiTask import UNetMultiTask
@@ -24,7 +25,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Training UNet Multitask, saving metrics")
     parser.add_argument('--run_name', type=str, required=True, help="Name of run, which will govern output file names")
     parser.add_argument('--epochs', type=int, required=True, help="Number of training epochs")
-    parser.add_argument('--lr', type=float, required=True, help="Learning Rate")
+    parser.add_argument('--lr', type=float, required=True, help="Learning rate")
+    parser.add_argument('--batchsize', type=int, required=True, help="Batch size")
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
     parser.add_argument('--with_augmentation', action='store_true', help="Perform data augmentation on training data")
     parser.add_argument('--leave_out_bad_cases', action='store_true', help="Don't train on bad cases")
@@ -97,7 +99,7 @@ val_dataset = MycetomaDataset(val_paths, DATA_DIR)
 
 train_dataset.__len__()
 
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=2, pin_memory=True)
+train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=2, pin_memory=True)
 val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=2, pin_memory=True)
 
 # test batch
@@ -123,6 +125,27 @@ train_losses = []
 val_losses = []
 train_accuracies = []
 val_accuracies = []
+
+# WANDB
+
+# OPTION FOR RUNNING WANDB OFFLINE
+# os.environ["WANDB_API_KEY"] = MY_API_KEY
+# os.environ["WANDB_MODE"] = "offline"
+
+# start a new wandb run to track this script - LOG IN ON CONSOLE BEFORE RUNNING
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="mycetoma_segmentation_sweep",
+    
+    # track hyperparameters and run metadata
+    config={
+    "learning_rate": args.lr,
+    "batch_size": args.batchsize,
+    "epochs": args.epochs,
+    "class_loss_weight": args.class_loss_weight,
+    }
+)
+
 
 # TRAIN
 threshold = 0.5
@@ -227,6 +250,17 @@ for epoch in range(args.epochs):
     train_accuracies.append(train_accuracy)
     val_accuracies.append(val_accuracy)
 
+    # LOG TO WANDB
+    wandb.log({
+        'train_loss': train_seg_loss,
+        'train_dice': train_dice_av,
+        'train_accuracy': train_accuracy,
+        'val_loss': val_loss,
+        'val_dice': val_dice_av,
+        'val_accuracy': val_accuracy,
+    })
+
+
     # Update best model if lowest loss (BASED ON SEGMENTATION LOSS)
     if val_seg_loss < best_val_seg_loss:
         best_val_seg_loss = val_seg_loss
@@ -246,6 +280,14 @@ metrics_dict = {
     'train_accuracies': np.array(train_accuracies),
     'val_accuracies': np.array(val_accuracies)
 }
+
+# WANDB log best val loss
+wandb.log({
+    "val_best_loss": best_val_seg_loss,
+})
+           
+# WANDB finish
+wandb.finish()
 
 # Save the dictionary to a .npy file
 np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
