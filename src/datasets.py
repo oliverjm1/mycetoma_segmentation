@@ -33,8 +33,6 @@ class MycetomaDataset(Dataset):
             image, mask = return_image_and_mask(self.data_dir, path, as_numpy=False)
             image, mask = self.transform(image, mask)
 
-            image
-
             # Turn from PIL to numpy array
             image = np.asarray(image)
             mask = np.asarray(mask)
