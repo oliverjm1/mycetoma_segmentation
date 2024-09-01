@@ -96,8 +96,8 @@ val_dataset = MycetomaDataset(val_paths, DATA_DIR)
 
 train_dataset.__len__()
 
-train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)
+train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=2, pin_memory=True)
+val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=2, pin_memory=True)
 
 # test batch
 batch = next(iter(train_loader))
