@@ -4,7 +4,7 @@
 src/__pycache__/
 
 # ignore notebook checkpoints
-src/.ipynb_checkpoints/
+*/.ipynb_checkpoints/
 
 # ignore data files
 data/*
