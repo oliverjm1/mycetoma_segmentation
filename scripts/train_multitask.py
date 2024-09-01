@@ -33,191 +33,153 @@ def parse_args():
     parser.add_argument('--class_loss_weight', type=int, default=1, help='Weight for the classification loss')
     return parser.parse_args()
 
-# Parse arguments
-args = parse_args()
+def main():
 
-DATA_DIR = '../data'
+    # Parse arguments
+    args = parse_args()
 
-# Directory to save model and metrics
-output_dir = 'outputs'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+    DATA_DIR = '../data'
 
-# Get full image path by adding filename to base path
-# Get the paths
-if args.use_corrected_dataset:
-    train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_training_dataset/**/*.jpg')])
+    # Directory to save model and metrics
+    output_dir = 'outputs'
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-else:
-    train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*.jpg')])
+    # Get full image path by adding filename to base path
+    # Get the paths
+    if args.use_corrected_dataset:
+        train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_training_dataset/**/*.jpg')])
 
-# Always use corrected for validation(?) to be consistent
-val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_validation_dataset/**/*.jpg')])
+    else:
+        train_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/training_dataset/**/*.jpg')])
 
-# If specified, remove bad masks (and by bad I mean a big grain not labelled at all in mask)
-# Problematic train masks:
-problem_train_paths = np.array([ 
-    'corrected_training_dataset/BM/BM3_4',
-    'corrected_training_dataset/BM/BM10_2',
-    'corrected_training_dataset/BM/BM13_6',
-    'corrected_training_dataset/BM/BM30_7',
-    'corrected_training_dataset/BM/BM31_7',
-    'corrected_training_dataset/BM/BM45_9',
-    'corrected_training_dataset/FM/FM41_1',
-    'corrected_training_dataset/FM/FM41_2',
-    'corrected_training_dataset/FM/FM45_6',
-    'corrected_training_dataset/FM/FM45_8',
-    'corrected_training_dataset/BM/BM6_11',
-    'corrected_training_dataset/FM/FM50_6'
-])
+    # Always use corrected for validation(?) to be consistent
+    val_paths = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/corrected_validation_dataset/**/*.jpg')])
 
-if args.leave_out_bad_cases:
-    train_paths = np.setdiff1d(train_paths, problem_train_paths)
+    # If specified, remove bad masks (and by bad I mean a big grain not labelled at all in mask)
+    # Problematic train masks:
+    problem_train_paths = np.array([ 
+        'corrected_training_dataset/BM/BM3_4',
+        'corrected_training_dataset/BM/BM10_2',
+        'corrected_training_dataset/BM/BM13_6',
+        'corrected_training_dataset/BM/BM30_7',
+        'corrected_training_dataset/BM/BM31_7',
+        'corrected_training_dataset/BM/BM45_9',
+        'corrected_training_dataset/FM/FM41_1',
+        'corrected_training_dataset/FM/FM41_2',
+        'corrected_training_dataset/FM/FM45_6',
+        'corrected_training_dataset/FM/FM45_8',
+        'corrected_training_dataset/BM/BM6_11',
+        'corrected_training_dataset/FM/FM50_6'
+    ])
 
-problem_val_paths = np.array(['corrected_validation_dataset/FM/FM10_1'])
+    if args.leave_out_bad_cases:
+        train_paths = np.setdiff1d(train_paths, problem_train_paths)
 
-val_paths = np.setdiff1d(val_paths, problem_val_paths)
+    problem_val_paths = np.array(['corrected_validation_dataset/FM/FM10_1'])
 
-print(f"Train length: {len(train_paths)}")
-print(f"Val length: {len(val_paths)}")
+    val_paths = np.setdiff1d(val_paths, problem_val_paths)
 
-# Set Device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-print(device)
+    print(f"Train length: {len(train_paths)}")
+    print(f"Val length: {len(val_paths)}")
 
-# Define the transform pipeline
-if args.with_augmentation:
-    print('Using Augmentation')
+    # Set Device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(device)
 
-    transform = ImageMaskTransforms()
-else:
-    transform=None
+    # Define the transform pipeline
+    if args.with_augmentation:
+        print('Using Augmentation')
 
-# Make Datasets
-train_dataset = MycetomaDataset(train_paths, DATA_DIR, transform=transform)
-val_dataset = MycetomaDataset(val_paths, DATA_DIR)
+        transform = ImageMaskTransforms()
+    else:
+        transform=None
 
-train_dataset.__len__()
+    # Make Datasets
+    train_dataset = MycetomaDataset(train_paths, DATA_DIR, transform=transform)
+    val_dataset = MycetomaDataset(val_paths, DATA_DIR)
 
-train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=2, pin_memory=True)
-val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=2, pin_memory=True)
+    train_dataset.__len__()
 
-# test batch
-batch = next(iter(train_loader))
-im, mask, label = batch
-print(f'img shape: {im.shape}; mask shape: {mask.shape}; label shape: {label.shape}')
+    train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=0, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=0, pin_memory=True)
 
-# Make model
-model = UNetMultiTask(3, 1, 8)
-model = model.to(device)
+    # test batch
+    batch = next(iter(train_loader))
+    im, mask, label = batch
+    print(f'img shape: {im.shape}; mask shape: {mask.shape}; label shape: {label.shape}')
 
-# use multiple gpu in parallel if available
-if torch.cuda.device_count() > 1:
-    model = nn.DataParallel(model)
+    # Make model
+    model = UNetMultiTask(3, 1, 8)
+    model = model.to(device)
 
-import gc
-torch.cuda.empty_cache()
-gc.collect()
+    # use multiple gpu in parallel if available
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
 
-train_dice_scores = []
-val_dice_scores = []
-train_losses = []
-val_losses = []
-train_accuracies = []
-val_accuracies = []
+    import gc
+    torch.cuda.empty_cache()
+    gc.collect()
 
-# WANDB
+    train_dice_scores = []
+    val_dice_scores = []
+    train_losses = []
+    val_losses = []
+    train_accuracies = []
+    val_accuracies = []
 
-# OPTION FOR RUNNING WANDB OFFLINE
-# os.environ["WANDB_API_KEY"] = MY_API_KEY
-# os.environ["WANDB_MODE"] = "offline"
+    # WANDB
 
-# start a new wandb run to track this script - LOG IN ON CONSOLE BEFORE RUNNING
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="mycetoma_segmentation_sweep",
-    
-    # track hyperparameters and run metadata
-    config={
-    "learning_rate": args.lr,
-    "batch_size": args.batchsize,
-    "epochs": args.epochs,
-    "class_loss_weight": args.class_loss_weight,
-    }
-)
+    # OPTION FOR RUNNING WANDB OFFLINE
+    # os.environ["WANDB_API_KEY"] = MY_API_KEY
+    # os.environ["WANDB_MODE"] = "offline"
+
+    # start a new wandb run to track this script - LOG IN ON CONSOLE BEFORE RUNNING
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="mycetoma_segmentation_sweep",
+        
+        # track hyperparameters and run metadata
+        config={
+        "learning_rate": args.lr,
+        "batch_size": args.batchsize,
+        "epochs": args.epochs,
+        "class_loss_weight": args.class_loss_weight,
+        }
+    )
 
 
-# TRAIN
-threshold = 0.5
-best_val_seg_loss = np.inf
+    # TRAIN
+    threshold = 0.5
+    best_val_seg_loss = np.inf
 
-# Specify optimiser and criterion
-seg_criterion = bce_dice_loss
-class_criterion = nn.BCELoss()
-l_rate = args.lr
-optimizer = optim.Adam(model.parameters(), lr=l_rate)
+    # Specify optimiser and criterion
+    seg_criterion = bce_dice_loss
+    class_criterion = nn.BCELoss()
+    l_rate = args.lr
+    optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
-best_model_path = os.path.join(output_dir, args.run_name + '_best_model.pth')
+    best_model_path = os.path.join(output_dir, args.run_name + '_best_model.pth')
 
-for epoch in range(args.epochs):
+    for epoch in range(args.epochs):
 
-    # train mode
-    model.train()
-    running_loss = 0.0
-    running_seg_loss = 0.0
-    dice_coeff = 0.0
-    total_accuracy = 0.0
-    n = 0    # counter for num of batches
+        # train mode
+        model.train()
+        running_loss = 0.0
+        running_seg_loss = 0.0
+        dice_coeff = 0.0
+        total_accuracy = 0.0
+        n = 0    # counter for num of batches
 
-    # Loop through train loader
-    for idx, (inputs, targets, labels) in enumerate(tqdm(train_loader)):
-        inputs = inputs.to(device)
-        targets = targets.to(device)
-        labels = labels.to(device) 
-
-        optimizer.zero_grad()
-
-        # Forward, backward, and update params
-        seg_outputs, class_outputs = model(inputs)
-
-        seg_loss = seg_criterion(seg_outputs, targets)
-        class_loss = class_criterion(class_outputs.squeeze(), labels.float())
-
-        total_loss = seg_loss + (args.class_loss_weight * class_loss)
-
-        total_loss.backward()
-        optimizer.step()
-
-        running_loss += total_loss.detach().cpu().numpy()
-        running_seg_loss += seg_loss.detach().cpu().numpy()
-        dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
-        total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
-        n += 1
-
-    # Get train metrics, averaged over number of images in batch
-    train_loss = running_loss/n
-    train_seg_loss = running_seg_loss/n
-    train_dice_av = dice_coeff/n
-    train_accuracy = total_accuracy/n
-
-    # After each batch, loop through validation loader and get metrics
-    # set model to eval mode and reset metrics
-    model.eval()
-    running_loss = 0.0
-    running_seg_loss = 0.0
-    dice_coeff = 0.0
-    total_accuracy = 0.0
-    n = 0
-
-    print("------------ VALIDATION -------------")
-
-    # Perform loop without computing gradients
-    with torch.no_grad():
-        for idx, (inputs, targets, labels) in enumerate(tqdm(val_loader)):
+        # Loop through train loader
+        for idx, (inputs, targets, labels) in enumerate(tqdm(train_loader)):
             inputs = inputs.to(device)
             targets = targets.to(device)
             labels = labels.to(device) 
 
+            optimizer.zero_grad()
+
+            # Forward, backward, and update params
             seg_outputs, class_outputs = model(inputs)
 
             seg_loss = seg_criterion(seg_outputs, targets)
@@ -225,71 +187,114 @@ for epoch in range(args.epochs):
 
             total_loss = seg_loss + (args.class_loss_weight * class_loss)
 
+            total_loss.backward()
+            optimizer.step()
+
             running_loss += total_loss.detach().cpu().numpy()
             running_seg_loss += seg_loss.detach().cpu().numpy()
             dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
             total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
             n += 1
 
-    # Val metrics
-    val_loss = running_loss/n
-    val_seg_loss = running_seg_loss/n
-    val_dice_av = dice_coeff/n
-    val_accuracy = total_accuracy/n
+        # Get train metrics, averaged over number of images in batch
+        train_loss = running_loss/n
+        train_seg_loss = running_seg_loss/n
+        train_dice_av = dice_coeff/n
+        train_accuracy = total_accuracy/n
 
-    # print stats
-    print(f"--------- EPOCH {epoch} ---------")
-    print(f"Train Loss: {train_loss} (Seg Loss: {train_seg_loss}), Train Dice Score: {train_dice_av}, Train Accuracy: {train_accuracy * 100:.2f}%")
-    print(f"Val Loss: {val_loss} (Seg Loss: {val_seg_loss}), Val Dice Score: {val_dice_av}, Val Accuracy: {val_accuracy * 100:.2f}%")
+        # After each batch, loop through validation loader and get metrics
+        # set model to eval mode and reset metrics
+        model.eval()
+        running_loss = 0.0
+        running_seg_loss = 0.0
+        dice_coeff = 0.0
+        total_accuracy = 0.0
+        n = 0
 
-    # save stats (save segmentation loss only)
-    train_losses.append(train_seg_loss)
-    val_losses.append(val_seg_loss)
-    train_dice_scores.append(train_dice_av)
-    val_dice_scores.append(val_dice_av)
-    train_accuracies.append(train_accuracy)
-    val_accuracies.append(val_accuracy)
+        print("------------ VALIDATION -------------")
 
-    # LOG TO WANDB
+        # Perform loop without computing gradients
+        with torch.no_grad():
+            for idx, (inputs, targets, labels) in enumerate(tqdm(val_loader)):
+                inputs = inputs.to(device)
+                targets = targets.to(device)
+                labels = labels.to(device) 
+
+                seg_outputs, class_outputs = model(inputs)
+
+                seg_loss = seg_criterion(seg_outputs, targets)
+                class_loss = class_criterion(class_outputs.squeeze(), labels.float())
+
+                total_loss = seg_loss + (args.class_loss_weight * class_loss)
+
+                running_loss += total_loss.detach().cpu().numpy()
+                running_seg_loss += seg_loss.detach().cpu().numpy()
+                dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
+                total_accuracy += accuracy(class_outputs.squeeze().detach().cpu(), labels.detach().cpu())
+                n += 1
+
+        # Val metrics
+        val_loss = running_loss/n
+        val_seg_loss = running_seg_loss/n
+        val_dice_av = dice_coeff/n
+        val_accuracy = total_accuracy/n
+
+        # print stats
+        print(f"--------- EPOCH {epoch} ---------")
+        print(f"Train Loss: {train_loss} (Seg Loss: {train_seg_loss}), Train Dice Score: {train_dice_av}, Train Accuracy: {train_accuracy * 100:.2f}%")
+        print(f"Val Loss: {val_loss} (Seg Loss: {val_seg_loss}), Val Dice Score: {val_dice_av}, Val Accuracy: {val_accuracy * 100:.2f}%")
+
+        # save stats (save segmentation loss only)
+        train_losses.append(train_seg_loss)
+        val_losses.append(val_seg_loss)
+        train_dice_scores.append(train_dice_av)
+        val_dice_scores.append(val_dice_av)
+        train_accuracies.append(train_accuracy)
+        val_accuracies.append(val_accuracy)
+
+        # LOG TO WANDB
+        wandb.log({
+            'train_loss': train_seg_loss,
+            'train_dice': train_dice_av,
+            'train_accuracy': train_accuracy,
+            'val_loss': val_loss,
+            'val_dice': val_dice_av,
+            'val_accuracy': val_accuracy,
+        })
+
+
+        # Update best model if lowest loss (BASED ON SEGMENTATION LOSS)
+        if val_seg_loss < best_val_seg_loss:
+            best_val_seg_loss = val_seg_loss
+            # Save the model
+            torch.save(model.state_dict(), best_model_path)
+            print('New best model saved')
+
+    print("Training completed")
+
+    # Save scores
+    # Create a dictionary to hold the arrays
+    metrics_dict = {
+        'train_losses': np.array(train_losses),
+        'val_losses': np.array(val_losses),
+        'train_dice_scores': np.array(train_dice_scores),
+        'val_dice_scores': np.array(val_dice_scores),
+        'train_accuracies': np.array(train_accuracies),
+        'val_accuracies': np.array(val_accuracies)
+    }
+
+    # WANDB log best val loss
     wandb.log({
-        'train_loss': train_seg_loss,
-        'train_dice': train_dice_av,
-        'train_accuracy': train_accuracy,
-        'val_loss': val_loss,
-        'val_dice': val_dice_av,
-        'val_accuracy': val_accuracy,
+        "val_best_loss": best_val_seg_loss,
     })
+            
+    # WANDB finish
+    wandb.finish()
 
+    # Save the dictionary to a .npy file
+    np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
 
-    # Update best model if lowest loss (BASED ON SEGMENTATION LOSS)
-    if val_seg_loss < best_val_seg_loss:
-        best_val_seg_loss = val_seg_loss
-        # Save the model
-        torch.save(model.state_dict(), best_model_path)
-        print('New best model saved')
+    print("Results Saved")
 
-print("Training completed")
-
-# Save scores
-# Create a dictionary to hold the arrays
-metrics_dict = {
-    'train_losses': np.array(train_losses),
-    'val_losses': np.array(val_losses),
-    'train_dice_scores': np.array(train_dice_scores),
-    'val_dice_scores': np.array(val_dice_scores),
-    'train_accuracies': np.array(train_accuracies),
-    'val_accuracies': np.array(val_accuracies)
-}
-
-# WANDB log best val loss
-wandb.log({
-    "val_best_loss": best_val_seg_loss,
-})
-           
-# WANDB finish
-wandb.finish()
-
-# Save the dictionary to a .npy file
-np.save(os.path.join(output_dir, args.run_name + '.npy'), metrics_dict)
-
-print("Results Saved")
+if __name__ == "__main__":
+    main()
