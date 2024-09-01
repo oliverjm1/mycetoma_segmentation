@@ -8,8 +8,10 @@ data/*
 !data/data.md
 
 # ignore results 
+results/input_images/*
 results/masks/*
 results/output_images/*
+results/output_segmented_images/*
 
 # ignore model saves and train stat files
 model_saves/*
