@@ -3,6 +3,9 @@
 # ignore pycache folder
 src/__pycache__/
 
+# ignore notebook checkpoints
+src/.ipynb_checkpoints/
+
 # ignore data files
 data/*
 !data/data.md
@@ -12,3 +15,11 @@ model_saves/*
 !model_saves/model_saves.md
 train_stats/*
 !train_stats/train_stats.md
+
+# ignore bash scripts and slurm output files
+
+*.sh
+slurm*
+
+# ignore output files
+scripts/outputs/
