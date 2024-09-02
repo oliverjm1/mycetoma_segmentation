@@ -21,6 +21,7 @@ Model_Weights_Classification_Path='.\\model_saves\\dense_net_pretrained_weights.
 Results_Dir='.\\results'
 # Get full image path by adding filename to base path
 
+
 # Get the paths
 test_paths_orig = np.array([os.path.relpath(i, DATA_DIR).split('.')[0] for i in glob.glob(f'{DATA_DIR}/test_dataset/**/*.jpg')])
 
@@ -54,6 +55,7 @@ print(list(set([path for path in test_paths_dup_rem])))
 test_patient_ids = list(set([get_patient_id(path) for path in test_paths_dup_rem]))
 
 overlap_adjustments(data_dir=DATA_DIR, test_paths=test_paths_dup_rem, test_patient_ids=test_patient_ids)
+
 
 
 ###########################################################################

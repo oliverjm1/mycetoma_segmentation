@@ -15,6 +15,23 @@ sys.path.append('../src')
 from src.utils import return_image_and_mask, return_image, return_mask, plot_image_and_mask
 
 
+# check size of every mask - if 3 channels then overwrite the file with one channel
+def check_mask_channels(data_dir, paths):
+    for i, path in enumerate(paths):
+        _, mask = return_image_and_mask(data_dir, path)
+        if mask.shape != (600, 800):
+            print(f'problem with {path}: shape is {mask.shape}')
+            single_channel_mask = mask[:, :, 0]
+                
+            # Convert the single-channel array back to an image
+            single_channel_img = Image.fromarray(single_channel_mask)
+            
+            # Save the single-channel image, overwriting the original file
+            single_channel_img.save(data_dir + '/' + path + '_mask.tif')
+
+            print('overwritten')
+
+
 ###########################################################################
 # Functions to combine duplicate masks
 ###########################################################################
@@ -229,16 +246,13 @@ def check_overlap(image1, image2, visualize=True):
     return overlap, translation
 
 
-
-
-
 # If the overlap is greater than a certain threshold, shift the masks in the same way and add to each other.
 
-def overlap_adjustments(data_dir, test_paths, test_patient_ids):
+def overlap_adjustments(data_dir, paths, patient_ids):
     # cycle through patients
-    for i, patient in enumerate(test_patient_ids):
+    for i, patient in enumerate(patient_ids):
         print(f'{patient} ({i+1}/23)')
-        patient_paths = get_patient_paths(test_paths, patient)
+        patient_paths = get_patient_paths(paths, patient)
 
         # cycle through path combinations
         for path1, path2 in combinations(patient_paths, 2):
