@@ -21,5 +21,8 @@ train_stats/*
 *.sh
 slurm*
 
-# ignore output files
+# ignore output and wandb files
 scripts/outputs/
+scripts/wandb/
+sweepJobs/
+sweepOuts/
