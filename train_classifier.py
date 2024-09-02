@@ -191,7 +191,7 @@ sweep_configuration = {
         "weight_decay": {"values": [0.0001, 0.001, 0.01]},
         "mask_channel": {"values": [True, False]},
         "threshold": {"max": 0.6, "min": 0.4},
-        "num_epochs": {"values": [20]},
+        "num_epochs": {"values": [30]},
         "seg_path": {"values": [0]},
     },
 }
