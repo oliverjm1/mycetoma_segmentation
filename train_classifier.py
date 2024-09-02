@@ -69,7 +69,7 @@ print(f"device = {device}")
 ###############################################################################################
 
 # Set data directory
-def define_dataset(hpc=0):
+def define_dataset(seg_path_type, hpc=0):
     
     debug_print("\n\n############ Setting up paths to data #############")
     
@@ -94,18 +94,47 @@ def define_dataset(hpc=0):
 
     debug_print(f"Train paths: {train_paths}")
 
-    # Post-processing binary 
-    train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_training", "**", "*"))])
-    val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_validation", "**", "*"))])
 
+    # Define segmentation mask types
+    seg_paths = [os.path.join("binary postprocessed", "corrected_masks_and_augmented_postproc"),
+                os.path.join("logit output", "corrected_masks_and_augmented"),
+                os.path.join("multitask", "binary postprocessed", "multitask_postproc"),
+                os.path.join("multitask", "logit output", "multitask")]
+
+    seg_path_end = seg_paths[seg_path_type]
+
+
+    train_seg_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, f"{seg_path_end}_training", "**", "*"))])
+    val_seg_paths = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, f"{seg_path_end}_validation", "**", "*"))])
+
+    print(f"train_seg_path example = {train_seg_paths[0]}")
+    print(f"val_seg_path example = {val_seg_paths[0]}")
+
+    # # Post-processing binary 
+    # train_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_training", "**", "*"))])
+    # val_seg_paths_bin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "binary postprocessed", "corrected_masks_and_augmented_postproc_validation", "**", "*"))])
+
+    # # Post-processing logit
+    # train_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "logit output", "corrected_masks_and_augmented_training", "**" "*"))])
+    # val_seg_paths_log = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "logit output", "corrected_masks_and_augmented_validation", "**", "*"))])
+
+    # # # # multitask binary
+    # train_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "multitask", "binary postprocessed", "multitask_postproc_training", "**", "*"))])
+    # val_seg_paths_multibin = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "multitask", "binary postprocessed", "multitask_postproc_validation", "**", "*"))])
+    
+    # # # # multitask logit
+    # train_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "multitask", "logit output", "multitask_training", "**", "*"))])
+    # val_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(os.path.join(data_dir, "multitask", "logit output", "multitask_validation", "**", "*"))])
+    
+    
     # Extract just the image paths
     train_img_paths = train_paths[[not 'mask' in i for i in train_paths]]
     val_img_paths = val_paths[[not 'mask' in i for i in val_paths]]
     img_paths = [train_img_paths, val_img_paths]
 
     # Combine image and segmentation map paths for each patient
-    train_paths = format_file_paths(train_seg_paths_bin, train_img_paths, HPC_FLAG)
-    val_paths = format_file_paths(val_seg_paths_bin, val_img_paths, HPC_FLAG)
+    train_paths = format_file_paths(train_seg_paths, train_img_paths, HPC_FLAG)
+    val_paths = format_file_paths(val_seg_paths, val_img_paths, HPC_FLAG)
 
     debug_print(f"Train length: {len(train_paths)}")
     debug_print(f"Val length: {len(val_paths)}")
@@ -114,7 +143,6 @@ def define_dataset(hpc=0):
     debug_print(f"val_path first example = {np.array(val_paths).shape} = {train_paths[0]}")
 
     return data_dir, train_paths, val_paths, plot_save_path, model_checkpoints_path 
-
 
 # ARC4
 # DATA_DIR = "/nobackup/scjb/mycetoma/data/"
@@ -134,11 +162,13 @@ def define_dataset(hpc=0):
 # val_seg_paths_multilog = np.array(['.'.join(i.split('.')) for i in glob.glob(f'{DATA_DIR}/multitask/logit output/multitask_validation/**/*')])
 
 
+
 # Define segmentation mask types
-seg_paths = ["binary postprocessed/corrected_masks_and_augmented_postproc",
-            "logit output/corrected_masks_and_augmented",
-            "multitask/binary postprocessed/multitask_postproc",
-            "multitask/logit output/multitask"]
+# seg_paths = ["binary postprocessed/corrected_masks_and_augmented_postproc",
+#             "logit output/corrected_masks_and_augmented",
+#             "multitask/binary postprocessed/multitask_postproc",
+#             "multitask/logit output/multitask"]
+
 
 
 ###############################################################################################
@@ -186,13 +216,13 @@ sweep_configuration = {
     "name": "sweep",
     "metric": {"goal": "minimize", "name": "Val Loss"},
     "parameters": {
-        "lr": {"max": 0.01, "min": 0.0001},
-        "batch_size": {"values": [5,10,12,16]},
-        "weight_decay": {"values": [0.0001, 0.001, 0.01]},
-        "mask_channel": {"values": [True, False]},
-        "threshold": {"max": 0.6, "min": 0.4},
+        "lr": {"max": 0.01, "min": 0.00001},
+        "batch_size": {"values": [12,16,24,32]},
+        "weight_decay": {"values": [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]},
+        "mask_channel": {"values": [True]},
+        "threshold": {"values": [0.5]},
         "num_epochs": {"values": [30]},
-        "seg_path": {"values": [0]},
+        "seg_path": {"values": [0,1,2,3]},
     },
 }
 
@@ -248,9 +278,7 @@ def main():
     print(f"Run start time = {run_start_time}")
 
     run = wandb.init()
-
-    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(hpc=HPC_FLAG)
-    
+     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     debug_print(f"device = {device}")    
 
@@ -269,12 +297,14 @@ def main():
     mask_channel = wandb.config.mask_channel
     threshold = wandb.config.threshold
     num_epochs = wandb.config.num_epochs #config["num_epochs"]
-    seg_path = wandb.config.seg_path
+    seg_path_type = wandb.config.seg_path
 
     print(f"Current hyperparameter values:\n {wandb.config}")
 
-    print(f"sep_path = {seg_path}\nsep_path type = {type(seg_path)}")
+    print(f"seg_path = {seg_path_type}\nseg_path type = {type(seg_path_type)}")
     # seg_path_end = seg_paths[seg_path]
+
+    data_dir, train_paths, val_paths, plot_save_dir, model_checkpoints_path = define_dataset(seg_path_type, hpc=HPC_FLAG)
 
 
     if mask_channel:
