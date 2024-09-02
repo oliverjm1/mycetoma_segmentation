@@ -98,16 +98,16 @@ with torch.no_grad():
         post_proc_mask = np.clip(post_process_binary_mask(pred, threshold_fraction=0.1), 0, 1)
         
         # save mask for classification stage
-        # post_proc_mask_img = Image.fromarray(post_proc_mask)
-        # post_proc_mask_img.save(Results_Dir + '/masks/' + str(idx) + '_mask.tif')
+        post_proc_mask_img = Image.fromarray(post_proc_mask)
+        post_proc_mask_img.save(Results_Dir + '/masks/' + str(idx) + '_mask.tif')
 
         # # save orig image for classification stage
-        # im_orig = inputs[0]
-        # save_image(im_orig, Results_Dir + '/input_images/' + str(idx) + '.jpg')
+        im_orig = inputs[0]
+        save_image(im_orig, Results_Dir + '/input_images/' + str(idx) + '.jpg')
 
         # # # visualize mask
-        # imagename_output=Results_Dir + '/output_segmented_images/' + str(idx) + '.jpg'
-        # visualize_segmented_image(post_proc_mask, im, pred, imagename_output)
+        imagename_output=Results_Dir + '/output_segmented_images/' + str(idx) + '.jpg'
+        visualize_segmented_image(post_proc_mask, im, pred, imagename_output)
 
         #TODO Give post_proc_mask to Ben model
         # Output type of grain
