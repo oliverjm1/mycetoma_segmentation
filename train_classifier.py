@@ -217,7 +217,7 @@ sweep_configuration = {
     "metric": {"goal": "minimize", "name": "Val Loss"},
     "parameters": {
         "lr": {"max": 0.01, "min": 0.00001},
-        "batch_size": {"values": [12,16,24,32]},
+        "batch_size": {"values": [16]},
         "weight_decay": {"values": [0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]},
         "mask_channel": {"values": [True]},
         "threshold": {"values": [0.5]},
@@ -232,7 +232,6 @@ sweep_configuration = {
 
 sweep_id = wandb.sweep(sweep=sweep_configuration, project="mycetoma-classifier-bayesian-sweep")
 
-
 #     "lr": tune.loguniform(1e-5, 1e-3),
 #     "batch_size": tune.choice([5, 10, 12, 16]),
 #     "weight_decay": tune.loguniform(1e-4,1e-2), 
@@ -241,7 +240,6 @@ sweep_id = wandb.sweep(sweep=sweep_configuration, project="mycetoma-classifier-b
 #     "num_epochs": tune.choice([30]),
 #     "seg_path": 0 # 1 = binary postprocessed, 2 = logit output, 3 = multitask binary, 4 = multitask logit
 #     }
-
 
 
 # hyperparams_local_test = {
