@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument('--use_corrected_dataset', action='store_true', help="Flag to use corrected dataset")
     parser.add_argument('--with_augmentation', action='store_true', help="Perform data augmentation on training data")
     parser.add_argument('--leave_out_bad_cases', action='store_true', help="Don't train on bad cases")
-    parser.add_argument('--class_loss_weight', type=int, default=1, help='Weight for the classification loss')
+    parser.add_argument('--class_loss_weight', type=float, default=1, help='Weight for the classification loss')
     return parser.parse_args()
 
 def main():
@@ -101,8 +101,8 @@ def main():
 
     train_dataset.__len__()
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=0, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=0, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=args.batchsize, shuffle=True, num_workers=2, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False, num_workers=2, pin_memory=True)
 
     # test batch
     batch = next(iter(train_loader))
@@ -129,10 +129,6 @@ def main():
     val_accuracies = []
 
     # WANDB
-
-    # OPTION FOR RUNNING WANDB OFFLINE
-    # os.environ["WANDB_API_KEY"] = MY_API_KEY
-    # os.environ["WANDB_MODE"] = "offline"
 
     # start a new wandb run to track this script - LOG IN ON CONSOLE BEFORE RUNNING
     wandb.init(
@@ -172,7 +168,7 @@ def main():
         n = 0    # counter for num of batches
 
         # Loop through train loader
-        for idx, (inputs, targets, labels) in enumerate(tqdm(train_loader)):
+        for idx, (inputs, targets, labels) in enumerate(train_loader):
             inputs = inputs.to(device)
             targets = targets.to(device)
             labels = labels.to(device) 
@@ -183,7 +179,7 @@ def main():
             seg_outputs, class_outputs = model(inputs)
 
             seg_loss = seg_criterion(seg_outputs, targets)
-            class_loss = class_criterion(class_outputs.squeeze(), labels.float())
+            class_loss = class_criterion(class_outputs, labels.float().unsqueeze(1))
 
             total_loss = seg_loss + (args.class_loss_weight * class_loss)
 
@@ -215,7 +211,7 @@ def main():
 
         # Perform loop without computing gradients
         with torch.no_grad():
-            for idx, (inputs, targets, labels) in enumerate(tqdm(val_loader)):
+            for idx, (inputs, targets, labels) in enumerate(val_loader):
                 inputs = inputs.to(device)
                 targets = targets.to(device)
                 labels = labels.to(device) 
