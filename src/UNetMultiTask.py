@@ -58,7 +58,7 @@ class UpConvBlock(nn.Module):
     
 # Define U-Net/Classifier architecture
 class UNetMultiTask(nn.Module):
-    def __init__(self, in_channels, out_channels, num_kernels_1):
+    def __init__(self, in_channels, out_channels, num_kernels_1, dropout_prob=0.3):
         super(UNetMultiTask, self).__init__()
 
         # Encoder
@@ -84,6 +84,7 @@ class UNetMultiTask(nn.Module):
         self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc1 = nn.Linear(num_kernels_1*8, 128)
         self.fc2 = nn.Linear(128, 1)
+        self.dropout = nn.Dropout(dropout_prob)
         
         # Activations
         self.sigmoid = nn.Sigmoid()
@@ -114,6 +115,7 @@ class UNetMultiTask(nn.Module):
         class_out = self.global_pool(bottleneck_out)
         class_out = torch.flatten(class_out, 1)
         class_out = self.relu(self.fc1(class_out))
+        class_out = self.dropout(class_out)
         class_out = self.sigmoid(self.fc2(class_out))
 
         return seg_out, class_out
