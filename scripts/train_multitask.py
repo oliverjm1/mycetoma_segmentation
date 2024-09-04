@@ -141,6 +141,7 @@ def main():
         "batch_size": args.batchsize,
         "epochs": args.epochs,
         "class_loss_weight": args.class_loss_weight,
+        "dropout": "yes",
         }
     )
 
