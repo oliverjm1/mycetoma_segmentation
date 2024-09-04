@@ -156,6 +156,9 @@ def main():
     l_rate = args.lr
     optimizer = optim.Adam(model.parameters(), lr=l_rate)
 
+    # Define the learning rate scheduler
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
+
     best_model_path = os.path.join(output_dir, args.run_name + '_best_model.pth')
 
     for epoch in range(args.epochs):
@@ -187,6 +190,9 @@ def main():
             total_loss.backward()
             optimizer.step()
 
+            # Step the scheduler
+            scheduler.step()
+
             running_loss += total_loss.detach().cpu().numpy()
             running_seg_loss += seg_loss.detach().cpu().numpy()
             dice_coeff += batch_dice_coeff(seg_outputs>threshold, targets).detach().cpu().numpy()
@@ -207,8 +213,6 @@ def main():
         dice_coeff = 0.0
         total_accuracy = 0.0
         n = 0
-
-        print("------------ VALIDATION -------------")
 
         # Perform loop without computing gradients
         with torch.no_grad():
@@ -236,8 +240,11 @@ def main():
         val_dice_av = dice_coeff/n
         val_accuracy = total_accuracy/n
 
+        # Learning rate
+        current_lr = optimizer.param_groups[0]['lr']
+
         # print stats
-        print(f"--------- EPOCH {epoch} ---------")
+        print(f"--------- EPOCH {epoch} (LR = {current_lr}---------")
         print(f"Train Loss: {train_loss} (Seg Loss: {train_seg_loss}), Train Dice Score: {train_dice_av}, Train Accuracy: {train_accuracy * 100:.2f}%")
         print(f"Val Loss: {val_loss} (Seg Loss: {val_seg_loss}), Val Dice Score: {val_dice_av}, Val Accuracy: {val_accuracy * 100:.2f}%")
 
