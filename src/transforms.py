@@ -12,7 +12,7 @@ class ImageMaskTransforms:
 
         # Define color jitter for image
         self.image_transforms = transforms.Compose([
-            transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.02)
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1)
         ])
 
     def __call__(self, image, mask):
