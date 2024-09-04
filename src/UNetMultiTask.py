@@ -114,8 +114,8 @@ class UNetMultiTask(nn.Module):
         # Classification Output
         class_out = self.global_pool(bottleneck_out)
         class_out = torch.flatten(class_out, 1)
-        class_out = self.relu(self.fc1(class_out))
         class_out = self.dropout(class_out)
+        class_out = self.relu(self.fc1(class_out))
         class_out = self.sigmoid(self.fc2(class_out))
 
         return seg_out, class_out
