@@ -12,6 +12,7 @@ data/*
 
 # ignore model saves and train stat files
 model_saves/*
+multitask_model_saves/*
 !model_saves/model_saves.md
 train_stats/*
 !train_stats/train_stats.md
