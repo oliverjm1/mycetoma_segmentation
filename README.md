@@ -25,7 +25,6 @@ This repository contains code for segmenting bacterial and fungal mycetoma grain
 │   └── data.md
 ├── model_saves
 │   └── model_saves.md
-├── multitask_model_saves
 ├── notebooks
 │   ├── combining_overlapping_masks.ipynb
 │   ├── dealing_with_duplicates.ipynb
