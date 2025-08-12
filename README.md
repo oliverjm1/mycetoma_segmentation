@@ -2,6 +2,8 @@
 
 This repository contains code for segmenting bacterial and fungal mycetoma grains from histopathology images.
 
+Link to MedInfo2025 paper: https://doi.org/10.3233/SHTI250977
+
 ## Pipeline Idea So Far...
 
 1. Visualised Data (`visualise_data.ipynb`), made a few corrections to errant files (wrong extensions, wrong mask shape etc...).
@@ -15,7 +17,7 @@ This repository contains code for segmenting bacterial and fungal mycetoma grain
 1. Go through train/validation data and manually remove bad examples (large areas of ground truth still not labelled). (DONE)
 2. Data Augmentation. (DONE)
 3. Domain issues (staining?). (Some colour jitter augmentation done to attempt to partially deal with this)
-4. Saving training/validation masks for Ben to train classifier on. (DONE)
+4. Saving training/validation masks to train classifier on. (DONE)
 
 ## Repo Structure
 
