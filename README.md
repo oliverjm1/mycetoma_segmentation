@@ -2,6 +2,9 @@
 
 This repository contains code for segmenting bacterial and fungal mycetoma grains from histopathology images.
 
+Link to dataset:
+https://mycetoma.edu.sd/?p=5242
+
 Link to MedInfo2025 paper: https://doi.org/10.3233/SHTI250977
 
 ## Pipeline Idea So Far...
